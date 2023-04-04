@@ -187,11 +187,29 @@ class RoomEnv1(gym.Env):
             raise NotImplementedError
 
         if self.allow_random_question:
+            # Questions are in the form of a quintuple as well 
+
+            # For now, just sample all combinations of object-object, object-small location, small-location relations.
+            # Might need to change so that we have more equal distribution of yes/no answers
+
+            # Get all of the first_human and first_object relations at the very least from states
+            self.question_sequence = []
+            for i in range(len(self.human_sequence)):
+                choice = random.choice(range(3))
+                relation = np.random.choice(range(2))
+                if choice == 0: 
+                    # object-object 
+                if choice == 1:
+                    # object-small 
+                if choice == 2:
+                    # small-large
+                
             self.question_sequence = [
                 random.choice(self.human_sequence[: i + 1])
                 for i in range(len(self.human_sequence))
             ]
         else:
+            """
             self.question_sequence = [self.human_sequence[0]]
             self.des.run()
             assert (
@@ -199,8 +217,8 @@ class RoomEnv1(gym.Env):
                 == len(self.des.events) + 1
                 == len(self.human_sequence)
             )
-            for i in range(len(self.human_sequence) - 1):
-                start = max(i + 2 - len(self.des.humans), 0)
+            for i in range(len(self.human_sequence) - 1):  
+                start = max(i + 2 - len(self.des.humans), 0) 
                 end = i + 2
                 humans_observed = self.human_sequence[start:end]
 
@@ -219,7 +237,8 @@ class RoomEnv1(gym.Env):
                     if not is_changed:
                         humans_not_changed.append(human)
 
-                self.question_sequence.append(random.choice(humans_not_changed))
+                self.question_sequence.append(random.choice(humans_not_changed)) 
+                """
 
             self.des._initialize()
 
@@ -308,11 +327,10 @@ class RoomEnv1(gym.Env):
         )
 
         if human_q is not None:
-            obj_q = self.des.state[human_q]["object"]
-            obj_loc_q = self.des.state[human_q]["object_location"]
+            # human_q is already a quintuple
 
-            question = deepcopy({"human": human_q, "object": obj_q})
-            answer = deepcopy(obj_loc_q)
+            question = deepcopy(human_q)
+            answer = deepcopy(obj_loc_q)  # TODO: We need to "presolve" the environment using Steven's code so that, given the timestep, we know the location of every item and insert here
 
         else:
             question = None

@@ -1,5 +1,5 @@
 {
-    "entities": {
+    "component_list": {
         "people": ["Nature", "Michael", "Kai", "Cameron", "Joy", "Laura"],
         "objects": ["laptop", "bottle", "pencil", "cushion", "phone"],
         "small_locations": ["table", "couch", "bed", "chair", "stool"],

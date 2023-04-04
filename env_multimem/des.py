@@ -80,6 +80,13 @@ class RoomDes:
         self.resources = deepcopy(self.config["resources"])
         self.semantic_knowledge = deepcopy(self.config["semantic_knowledge"])
 
+        self.component_list = deepcopy(self.config["component_list"])
+
+        self.people = self.component_list["people"]
+        self.objects = self.component_list["objects"]
+        self.small_locations = self.component_list["small_locations"]
+        self.large_locations = self.component_list["large_locations"]
+
         # TODO: Also initialize small/big locations
         
         self.first_humans = []
@@ -197,16 +204,19 @@ class RoomDes:
         assert len(previous_resources) == len(current_resources)
 
         state_changes = {}
-        resource_changes = {}
 
         humans = list(previous_state)
         for human in humans:
-            previous_object = previous_state[human]["object"]
-            previous_object_location = previous_state[human]["object_location"]
+            previous_object = previous_state[human]["first_object"]
+            previous_relation = previous_state[human]["relation"]
+            previous_second_human = previous_state[human]["second_human"]
+            previous_second_object = previous_state[human]["second_object"]
             previous_time = previous_state[human]["current_time"]
 
-            current_object = current_state[human]["object"]
-            current_object_location = current_state[human]["object_location"]
+            current_object = current_state[human]["first_object"]
+            current_relation = current_state[human]["relation"]
+            current_second_human = current_state[human]["second_human"]
+            current_second_object = current_state[human]["second_object"]
             current_time = current_state[human]["current_time"]
 
             assert current_time == previous_time + 1
@@ -214,14 +224,24 @@ class RoomDes:
             state_changes[human] = {}
 
             if previous_object != current_object:
-                state_changes[human]["object"] = {
+                state_changes[human]["first_object"] = {
                     "previous": previous_object,
                     "current": current_object,
                 }
-            if previous_object_location != current_object_location:
-                state_changes[human]["object_location"] = {
-                    "previous": previous_object_location,
-                    "current": current_object_location,
+            if previous_relation != current_relation:
+                state_changes[human]["relation"] = {
+                    "previous": previous_relation, 
+                    "current": current_relation
+                }
+            if previous_second_human != current_second_human:
+                state_changes[human]["second_human"] = {
+                    "previous": previous_second_human, 
+                    "current": current_second_human
+                }
+            if previous_second_object != current_second_object:
+                state_changes[human]["second_object"] = {
+                    "previous": previous_second_object,
+                    "current": current_second_object,
                 }
 
             if len(state_changes[human]) == 0:
@@ -229,14 +249,7 @@ class RoomDes:
             else:
                 state_changes[human]["current_time"] = current_time
 
-        for resource in previous_resources:
-            previous_amount = previous_resources[resource]
-            current_amount = current_resources[resource]
-
-            if previous_amount != current_amount:
-                resource_changes[resource] = current_amount - previous_amount
-
-        return {"state_changes": state_changes, "resource_changes": resource_changes}
+        return {"state_changes": state_changes}
 
     def run(self, debug: bool = False) -> None:
         """Run until the RoomDes terminates."""
