@@ -6,7 +6,7 @@ from multiprocessing.sharedctypes import Value
 import torch
 from torch import nn
 
-
+  
 class LSTM(nn.Module):
     """A simple LSTM network."""
 
@@ -68,6 +68,7 @@ class LSTM(nn.Module):
             raise ValueError
 
         self.create_embeddings()
+
         if "episodic" in self.memory_systems:
             self.lstm_e = nn.LSTM(
                 self.input_size_e, hidden_size, num_layers, batch_first=batch_first
@@ -90,6 +91,19 @@ class LSTM(nn.Module):
             # self.fc_o0 = nn.Linear(self.input_size_o, hidden_size)
             self.fc_o1 = nn.Linear(hidden_size, hidden_size)
 
+        self.fc_q0 = nn.Linear(self.embedding_dim * 5, hidden_size)  # Times 5 because question has 5 parts (Human1, Object1, Relation, Human2, Object2)
+        self.fc_q1 = nn.Linear(hidden_size, hidden_size)
+
+        self.fc_final_question0 = nn.Linear(
+            hidden_size * (len(self.memory_systems) + 1),   # Hidden size for the memory systems AND the question
+            hidden_size * (len(self.memory_systems) + 1)
+        )
+
+        # Final output for the question is binary filter of length corresponding to the entire memory capacity AND a single binary variable that is a yes/no answer
+        self.fc_final_question1 = nn.Linear(hidden_size * (len(self.memory_systems) + 1), self.capacity["episodic"] + self.capacity["semantic"] + self.capacity["short"] + 1)
+        
+
+        # Continue original code
         self.fc_final0 = nn.Linear(
             hidden_size * len(self.memory_systems),
             hidden_size * len(self.memory_systems),
@@ -101,9 +115,11 @@ class LSTM(nn.Module):
         """Create learnable embeddings."""
         self.word2idx = (
             ["<PAD>"]
-            + self.entities["humans"]
-            + self.entities["objects"]
-            + self.entities["object_locations"]
+            + self.entities["first_humans"]
+            + self.entities["first_objects"]
+            + self.entities["relations"]
+            + self.entities["second_humans"]
+            + self.entities["second_objects"]
         )
         self.word2idx = {word: idx for idx, word in enumerate(self.word2idx)}
         self.embeddings = nn.Embedding(
@@ -123,6 +139,27 @@ class LSTM(nn.Module):
                 "include_human should be one of None, 'sum', or 'concat', "
                 f"but {self.include_human} was given!"
             )
+    
+    def make_embedding_question(self, question: tuple) -> torch.Tensor:
+        first_human, first_object, relation, second_human, second_object = question
+
+        # Each item is already in word2idx because must be included in the environment to be a valid question 
+        fh_idx = self.word2idx[first_human]
+        fo_idx = self.word2idx[first_object]
+        r_idx = self.word2idx[relation]
+        sh_idx = self.word2idx[second_human]
+        so_idx = self.word2idx[second_object]
+
+        fh_embedding = self.embeddings(torch.tensor(fh_idx, device=self.device))
+        fo_embedding = self.embeddings(torch.tensor(fo_idx, device=self.device))
+        r_embedding = self.embeddings(torch.tensor(r_idx, device=self.device))
+        sh_embedding = self.embeddings(torch.tensor(sh_idx, device=self.device))
+        so_embedding = self.embeddings(torch.tensor(so_idx, device=self.device))
+
+        final_embedding = torch.concat(
+                [fh_embedding, fo_embedding, r_embedding, sh_embedding, so_embedding]
+            )
+        return final_embedding
 
     def make_embedding(self, mem: dict, memory_type: str) -> torch.Tensor:
         """Create one embedding vector with summation and concatenation.
@@ -194,6 +231,8 @@ class LSTM(nn.Module):
 
         """
         batch = []
+
+        # TODO: Allow creating a batch of filters and classification answers
         for mems_str in x:
             entries = ast.literal_eval(mems_str)
 
@@ -237,7 +276,12 @@ class LSTM(nn.Module):
             the length of this is batch size
         x[2]: short batch
             the length of this is batch size
-
+        x[3]: question batch
+            the length of this is batch size 
+        x[4]: filter batch
+            the length of this is batch size 
+        x[5]: answer batch
+            the length of this is batch size 
         """
         x_ = deepcopy(x)
         for i in range(3):
@@ -246,6 +290,7 @@ class LSTM(nn.Module):
                 # batch size 1 happens.
                 x_[i] = [x_[i]]
 
+        # TODO: Insert concat for the question/filter stuff as well?
         to_concat = []
         if "episodic" in self.memory_systems:
             batch_e = self.create_batch(

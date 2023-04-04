@@ -1,0 +1,194 @@
+{
+    "entities": {
+        "people": ["Nature", "Michael", "Kai", "Cameron", "Joy", "Laura"],
+        "objects": ["laptop", "bottle", "pencil", "cushion", "phone"],
+        "small_locations": ["table", "couch", "bed", "chair", "stool"],
+        "large_locations": ["Study", "Garage", "Living Room", "Kitchen"]
+    },
+    "components": {
+        "Nature": [
+            [
+                "table",
+                "AtLocation",
+                "None",
+                "Kitchen"
+            ], 
+            [
+                "couch",
+                "AtLocation",
+                "None",
+                "Living Room"
+            ], 
+            [
+                "bed",
+                "AtLocation",
+                "None",
+                "Garage"
+            ], 
+            [
+                "chair",
+                "NextTo",
+                "None",
+                "table"
+            ], 
+            [
+                "stool",
+                "NextTo",
+                "None",
+                "bed"
+            ], 
+            [
+                "table",   
+                "AtLocation",
+                "None",
+                "Study"
+            ]
+        ],
+        "Michael": [
+            [
+                "laptop",
+                "AtLocation",
+                "None",
+                "table"
+            ],
+            [
+                "bottle",
+                "NextTo",
+                "Laura",
+                "laptop"
+            ], 
+            [
+                "laptop",
+                "AtLocation",
+                "None",
+                "table"
+            ], 
+            [
+                "laptop",
+                "AtLocation",
+                "None",
+                "table"
+            ]
+        ],
+        "Laura": [
+            [
+                "laptop",
+                "AtLocation",
+                "None",
+                "couch"
+            ], 
+            [
+                "laptop",
+                "AtLocation",
+                "None",
+                "couch"
+            ],
+            [
+                "phone",
+                "NextTo",
+                "Laura",
+                "laptop"
+            ]
+        ],
+        "Kai": [
+            [
+                "cushion",
+                "AtLocation",
+                "None",
+                "Chair"   
+            ], 
+            [
+                "shoes",
+                "AtLocation",
+                "None",
+                "stool"
+            ], 
+            [
+                "cushion",
+                "AtLocation",
+                "None",
+                "Chair"
+            ], 
+            [
+                "phone",
+                "NextTo",
+                "Laura",
+                "laptop"
+            ], 
+            [
+                "phone",
+                "NextTo",
+                "Laura",
+                "laptop"
+            ]
+        ],
+        "Cameron": [
+            [
+                "laptop",
+                "AtLocation",
+                "None",
+                "table" 
+            ],
+            [
+                "phone",
+                "NextTo",
+                "Cameron",
+                "laptop" 
+            ], 
+            [
+                "bottle",
+                "AtLocation",
+                "None",
+                "Bed"
+            ]
+        ],
+        "Joy": [
+            [
+                "cushion",
+                "AtLocation",
+                "None",
+                "stool"
+            ], 
+            [
+                "bottle",
+                "NextTo",
+                "Cameron",
+                "bottle"
+            ], 
+            [
+                "bottle",
+                "NextTo",
+                "Cameron",
+                "bottle"
+            ], 
+            [
+                "cushion",
+                "AtLocation",
+                "None",
+                "stool"
+            ], 
+            [
+                "phone",
+                "AtLocation",
+                "None",
+                "Table"
+            ],
+            [
+                "laptop",
+                "NextTo",
+                "Joy",
+                "Phone"
+            ],
+            [
+                "laptop",
+                "NextTo",
+                "Joy",
+                "Phone"
+            ]
+        ]
+    },
+    "last_timestep": 128,
+    "semantic_knowledge": {
+    },
+    "complexity": 2048
+}

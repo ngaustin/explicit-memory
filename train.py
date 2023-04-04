@@ -196,6 +196,7 @@ class RLAgent:
         if np.random.random() < epsilon:
             action = self.action_space.sample()
         else:
+            # TODO: Change this so that it is not just Q-value but also a filter map, and a classification action
             q_values = net(self.state)
             _, action = torch.max(q_values, dim=1)
             action = int(action.item())
@@ -229,9 +230,11 @@ class RLAgent:
         -------
         reward, done
         """
+        # TODO: Change this so that the action is a dictionary
         action = self.get_action(net, epsilon, step)
 
         # do step in the environment
+        # TODO: Change this to match the environment we created
         new_state, reward, done, truncated, info = self.env.step(action)
 
         # The lists will be converted to str temporarily ...
@@ -335,6 +338,8 @@ class DQNLightning(LightningModule):
         """
         super().__init__()
         self.save_hyperparameters()
+
+        # TODO Replace this with manual creation of new environment 
         self.env = gym.make(
             "RoomEnv-v1",
             des_size=self.hparams.des_size,
@@ -349,6 +354,8 @@ class DQNLightning(LightningModule):
             check_resources=False,
             varying_rewards=self.hparams.varying_rewards,
         )
+
+        # TODO: Create a different buffer for filter training as well
         self.replay_buffer = ReplayBuffer(self.hparams.replay_size)
         self.agent = RLAgent(
             env=self.env,
@@ -364,13 +371,18 @@ class DQNLightning(LightningModule):
             raise NotImplementedError
 
         self.hparams.nn_params["n_actions"] = self.agent.action_space.n
+        # TODO: Change this to account for the code changes in environment (first_human...etc.)
         self.hparams.nn_params["entities"] = {
-            "humans": self.env.des.humans,
-            "objects": self.env.des.objects,
-            "object_locations": self.env.des.object_locations,
+            "first_humans": self.env.des.first_humans,
+            "first_objects": self.env.des.first_objects,
+            "relations": self.env.des.relations,
+            "second_humans": self.env.des.second_humans,
+            "second_objects": self.env.des.second_objects,
         }
         self.hparams.nn_params["capacity"] = self.hparams.capacity
         self.hparams.nn_params["accelerator"] = self.hparams["accelerator"]
+
+        # TODO: Create a different network for filter training
         self.net = DQN(**self.hparams.nn_params)
         self.target_net = DQN(**self.hparams.nn_params)
 
