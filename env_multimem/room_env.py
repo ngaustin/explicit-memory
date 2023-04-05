@@ -194,20 +194,45 @@ class RoomEnv1(gym.Env):
 
             # Get all of the first_human and first_object relations at the very least from states
             self.question_sequence = []
+
+            possible_questions_subjects = {}  # set of tuples (first_human, first_objects) that are mentioned in the env
+
+            for state in self.des.states: 
+                for first_human in state.keys():
+                    first_object = state[first_human]["first_object"]
+                    possible_questions_subjects.add((first_human, first_object))
+            
+            self.question_sequence = []
+
             for i in range(len(self.human_sequence)):
-                choice = random.choice(range(3))
-                relation = np.random.choice(range(2))
-                if choice == 0: 
-                    # object-object 
-                if choice == 1:
-                    # object-small 
-                if choice == 2:
-                    # small-large
-                
-            self.question_sequence = [
-                random.choice(self.human_sequence[: i + 1])
-                for i in range(len(self.human_sequence))
-            ]
+                # Choose a random subject 
+                subject = random.choice(possible_questions_subjects)
+                choice = random.choice([1, 2])
+                if subject[1] in self.des.objects: 
+                    # Choose object or small location relation 
+                    if choice == 1:
+                        # Find another human's object that doesn't equal the current subject
+                        curr_object = copy(subject)
+                        while curr_object != subject and curr_object[1] not in self.des.objects: 
+                            curr_object = randomchoice(possible_questions_subjects)
+                        self.question_sequence.append((subject[0], subject[1], "NextTo", curr_object[0], curr_object[1]))
+                    else:
+                        # AtLocation small Locaiton 
+                        small_location = random.choice(self.des.small_locations)
+                        self.question_sequence.append((subject[0], subject[1], "AtLocation", "None", small_location))
+                if subject[1] in self.des.small_locations:
+                    if choice == 1:
+                        # NExtTo small location
+                        # Find a small location that doesn't equal the current subject 
+                        curr_object = copy(subject)
+                        while curr_object != subject and curr_object[1] not in self.des.small_locations: 
+                            curr_object = randomchoice(possible_questions_subjects)
+                        self.question_sequence.append((subject[0], subject[1], "NextTo", curr_object[0], curr_object[1]))
+                    else:
+                        # AtLocation big location
+                        big_location = random.choice(self.des.big_locations)
+                        self.question_sequence.append((subject[0], subject[1], "AtLocation", "None", big_location))
+
         else:
             """
             self.question_sequence = [self.human_sequence[0]]
@@ -303,8 +328,8 @@ class RoomEnv1(gym.Env):
         is_last: True, if its the last observation in the queue, othewise False
 
         """
-        human_o = self.human_sequence.pop(0)
-        human_q = self.question_sequence.pop(0)
+        first_human = self.human_sequence.pop(0)
+        question = self.question_sequence.pop(0)
 
         is_last_o = len(self.human_sequence) == 0
         is_last_q = len(self.question_sequence) == 0
@@ -315,13 +340,18 @@ class RoomEnv1(gym.Env):
         if increment_des:
             self.des.step()
 
-        obj_o = self.des.state[human_o]["object"]
-        obj_loc_o = self.des.state[human_o]["object_location"]
+        first_object = self.des.state[first_human]["first_object"]
+        relation = self.des.state[first_human]["relation"]
+        second_human = self.des.state[first_human]["second_human"]
+        second_object = self.des.state[first_human]["second_object"]
+ 
         observation = deepcopy(
             {
-                "human": human_o,
-                "object": obj_o,
-                "object_location": obj_loc_o,
+                "first_human": first_human,
+                "first_object": first_object,
+                "relation": relation,
+                "second_human": second_human,
+                "second_object": second_object,
                 "current_time": self.des.current_time,
             }
         )
@@ -390,7 +420,7 @@ class RoomEnv1(gym.Env):
         raise ValueError
 """
     def step(self, action: int) -> Tuple[Tuple, int, bool, bool, dict]:
-        """An agent takes an action.
+        An agent takes an action.
 
         Args
         ----
@@ -400,7 +430,7 @@ class RoomEnv1(gym.Env):
         -------
         state, reward, done, truncated, info
 
-        """
+        
         info = {}
         truncated = False
         if self.policies["encoding"].lower() == "rl":
@@ -559,15 +589,19 @@ class RoomEnv1(gym.Env):
                 pred = 'yes' if answer_action == 1 else 'no'
             else:  # Otherwise use the prediction by manually using the memory
                 if filter_action: # If there is a filter that was provided
-                    pred = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
+                    pred, correct_filter = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
                 else:  # Then use the filter to answer the question manually
-                    pred = answer_question(
+                    pred, correct_filter = answer_question(
                         self.memory_systems, self.policies["question_answer"], self.question, None
                     )
             if str(pred).lower() == self.answer:
                 reward = self.CORRECT
             else:
                 reward = self.WRONG
+                
+        correct_answer, correct_filter = answer_question(
+            self.memory_systems, self.policies["question_answer"], self.question, None
+        )
 
         self.obs, self.question, self.answer, self.is_last = self.generate_oqa(
             increment_des=True
@@ -579,6 +613,10 @@ class RoomEnv1(gym.Env):
             done = True
         else:
             done = False
+
+        info["correct_filter"] = correct_filter
+        info["correct_answer"] = correct_answer
+        info["next_question"] = copy(self.question)
 
         return state, reward, done, truncated, info
 

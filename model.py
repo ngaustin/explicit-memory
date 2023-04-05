@@ -160,6 +160,14 @@ class LSTM(nn.Module):
                 [fh_embedding, fo_embedding, r_embedding, sh_embedding, so_embedding]
             )
         return final_embedding
+    
+    def create_batch_question(self, questions):
+        batch = []
+        for q in questions: 
+            batch.append(self.make_embedding_question(q))
+        batch = torch.stack(batch)
+
+        return batch
 
     def make_embedding(self, mem: dict, memory_type: str) -> torch.Tensor:
         """Create one embedding vector with summation and concatenation.
@@ -232,7 +240,6 @@ class LSTM(nn.Module):
         """
         batch = []
 
-        # TODO: Allow creating a batch of filters and classification answers
         for mems_str in x:
             entries = ast.literal_eval(mems_str)
 
@@ -278,10 +285,6 @@ class LSTM(nn.Module):
             the length of this is batch size
         x[3]: question batch
             the length of this is batch size 
-        x[4]: filter batch
-            the length of this is batch size 
-        x[5]: answer batch
-            the length of this is batch size 
         """
         x_ = deepcopy(x)
         for i in range(3):
@@ -321,6 +324,13 @@ class LSTM(nn.Module):
                 self.fc_o1(self.relu(self.fc_o0(lstm_out_o[:, -1, :])))
             )
             to_concat.append(fc_out_o)
+        
+        if len(x_) > 3: # Question, filter, and answer were also passed in
+            batch_q = self.create_batch_question(x_[3])  
+            res = self.fc_q1(self.relu(self.fc_q0(batch_z)))
+            memory_and_question = to_concat.append(res)
+            fc_out = self.sigmoid(self.fc_final_question1(self.relu(self.fc_final_question0(memory_and_question))))
+            return fc_out 
 
         # dim=-1 is the feature dimension
         fc_out_all = torch.concat(to_concat, dim=-1)

@@ -24,6 +24,8 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataset import IterableDataset
 
+from env_multimem_room_env import RoomEnv
+
 from utils import write_json
 
 logger = logging.getLogger()
@@ -33,6 +35,11 @@ logger.disabled = True
 Experience = namedtuple(
     "Experience",
     field_names=["state", "action", "reward", "done", "new_state"],
+)
+
+DataPoint = namedtuple(
+    "DataPoint",
+    field_names=["state", "binary_filter", "binary_label"]
 )
 
 
@@ -126,6 +133,7 @@ class RLAgent:
         self,
         env: gym.Env,
         replay_buffer: ReplayBuffer,
+        filter_classification_buffer: ReplayBuffer,
         capacity: dict,
         pretrain_semantic: bool,
         policies: dict,
@@ -147,11 +155,18 @@ class RLAgent:
         """
         self.env = env
         self.replay_buffer = replay_buffer
+        self.filter_classification_buffer = filter_classification_buffer
         self.capacity = capacity
         self.pretrain_semantic = pretrain_semantic
         self.policies = policies
         self.create_spaces()
         self.debug_dump = []
+        self.question = None
+
+        # NOTE: This toggles the difficulty of our method 
+        self.pass_in_filter = False 
+        self.pass_in_answer = False
+
         self.reset()
 
     def create_spaces(self) -> None:
@@ -168,12 +183,14 @@ class RLAgent:
         """Reset the environment and update the state."""
         self.debug_dump = []
         self.state, info = self.env.reset()
+        self.question = None
 
         # The lists will be converted to str temporarily ...
         self.state = [
             str(self.state["episodic"]),
             str(self.state["semantic"]),
             str(self.state["short"]),
+            None
         ]
 
     def get_action(
@@ -193,11 +210,11 @@ class RLAgent:
         -------
         action
         """
+        actions = {}
         if np.random.random() < epsilon:
             action = self.action_space.sample()
         else:
-            # TODO: Change this so that it is not just Q-value but also a filter map, and a classification action
-            q_values = net(self.state)
+            q_values = net(self.state[:3])
             _, action = torch.max(q_values, dim=1)
             action = int(action.item())
 
@@ -207,8 +224,18 @@ class RLAgent:
                 "step": step,
             }
             self.debug_dump.append(to_dump)
+        
+        # Include the question to have output a filter and answer
+        filter_and_answer = net(self.state)
 
-        return action
+        memory_filter = filter_and_answer[:-1]  # TODO: Reshape this to match the memory structure
+        answer = filter_and_answer[-1]
+
+        actions["memory_management_action"] = action 
+        actions["filter_action"] = memory_filter if self.pass_in_filter else None 
+        actions["answer_action"] = answer if self.pass_in_answer else None 
+
+        return actions
 
     @torch.no_grad()
     def play_step(
@@ -230,21 +257,27 @@ class RLAgent:
         -------
         reward, done
         """
-        # TODO: Change this so that the action is a dictionary
-        action = self.get_action(net, epsilon, step)
+        actions = self.get_action(net, epsilon, step)
 
-        # do step in the environment
-        # TODO: Change this to match the environment we created
-        new_state, reward, done, truncated, info = self.env.step(action)
+        action = actions["memory_management_action"]
+
+        # info["correct_filter"] and info["correct_answer"] and info["next_question"] are filled
+        new_state, reward, done, truncated, info = self.env.step(actions)
 
         # The lists will be converted to str temporarily ...
         new_state = [
             str(new_state["episodic"]),
             str(new_state["semantic"]),
             str(new_state["short"]),
+            info["next_question"]
         ]
 
         exp = Experience(deepcopy(self.state), action, reward, done, new_state)
+        if not self.question: # if not None:
+            dp = DataPoint(deepcopy(self.state), self.question, info["correct_filter"], info["correct_answer"])
+            self.filter_classification_buffer.append(dp)
+
+        self.question = info["next_question"]
 
         self.replay_buffer.append(exp)
 
@@ -339,27 +372,29 @@ class DQNLightning(LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        # TODO Replace this with manual creation of new environment 
-        self.env = gym.make(
-            "RoomEnv-v1",
-            des_size=self.hparams.des_size,
-            seed=self.hparams.seed,
-            policies=self.hparams.policies,
-            capacity=self.hparams.capacity,
-            question_prob=self.hparams.question_prob,
-            observation_params=self.hparams.observation_params,
-            allow_random_human=self.hparams.allow_random_human,
-            allow_random_question=self.hparams.allow_random_question,
-            pretrain_semantic=self.hparams.pretrain_semantic,
-            check_resources=False,
-            varying_rewards=self.hparams.varying_rewards,
+        self.env = RoomEnv(
+                "RoomEnv-v1",
+                des_size=self.hparams.des_size,
+                seed=self.hparams.seed,
+                policies=self.hparams.policies,
+                capacity=self.hparams.capacity,
+                question_prob=self.hparams.question_prob,
+                observation_params=self.hparams.observation_params,
+                allow_random_human=self.hparams.allow_random_human,
+                allow_random_question=self.hparams.allow_random_question,
+                pretrain_semantic=self.hparams.pretrain_semantic,
+                check_resources=False,
+                varying_rewards=self.hparams.varying_rewards,
         )
 
         # TODO: Create a different buffer for filter training as well
         self.replay_buffer = ReplayBuffer(self.hparams.replay_size)
+        self.filter_classification_buffer = ReplayBuffer(self.hparams.replay_size)
+
         self.agent = RLAgent(
             env=self.env,
             replay_buffer=self.replay_buffer,
+            filter_classification_buffer=self.filter_classification_buffer,
             capacity=self.hparams.capacity,
             pretrain_semantic=self.hparams.pretrain_semantic,
             policies=self.hparams.policies,
@@ -382,7 +417,6 @@ class DQNLightning(LightningModule):
         self.hparams.nn_params["capacity"] = self.hparams.capacity
         self.hparams.nn_params["accelerator"] = self.hparams["accelerator"]
 
-        # TODO: Create a different network for filter training
         self.net = DQN(**self.hparams.nn_params)
         self.target_net = DQN(**self.hparams.nn_params)
 
@@ -438,11 +472,11 @@ class DQNLightning(LightningModule):
         """
         states, actions, rewards, dones, next_states = batch
         state_action_values = (
-            self.net(states).gather(1, actions.long().unsqueeze(-1)).squeeze(-1)
+            self.net(states[:3]).gather(1, actions.long().unsqueeze(-1)).squeeze(-1)
         )
 
         with torch.no_grad():
-            next_state_values = self.target_net(next_states).max(1)[0]
+            next_state_values = self.target_net(next_states[:3]).max(1)[0]
             next_state_values[dones] = 0.0
             next_state_values = next_state_values.detach()
 
@@ -454,6 +488,21 @@ class DQNLightning(LightningModule):
             return nn.SmoothL1Loss()(state_action_values, expected_state_action_values)
         else:
             raise ValueError
+
+    def filter_classification_loss(self, batch:[Tensor, Tensor]) -> Tensor:
+        states, filters, labels = batch 
+        model_outputs = self.net(states)
+
+        pred_filter = model_outputs[:, :-1]
+        pred_label = model_outputs[:, -1]
+
+        answer_loss = labels * torch.log(pred_label) + (1 - labels) * torch.log(1 - pred_label)
+        filter_loss = filters * torch.log(pred_filter) + (1 - filters) * torch.log(1 - pred_filter)
+
+        answer_loss = torch.mean(answer_loss)
+        filter_loss = torch.mean(torch.mean(filter_loss, dim=1), dim=0)
+
+        return answer_loss + filter_loss
 
     def get_epsilon(self, start: int, end: int, eps_last_step: int) -> float:
         """Get the epsilon value. The scheduling is done lienarly.
