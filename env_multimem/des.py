@@ -121,9 +121,6 @@ class RoomDes:
         self.relations = sorted(list(set(self.relations)))
         self.second_humans = sorted(list(set(self.second_humans)))
         self.object_locations = sorted(list(set(self.second_objects)))
-
-        # TODO: Construct dictionaries to help answer questions 
-        # TODO: This will the part for Steven's code..where we answer questions? 
         
 
         self.until = deepcopy(self.config["last_timestep"])

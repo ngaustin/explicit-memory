@@ -34,12 +34,7 @@ logger.disabled = True
 # Named tuple for storing experience steps gathered in training
 Experience = namedtuple(
     "Experience",
-    field_names=["state", "action", "reward", "done", "new_state"],
-)
-
-DataPoint = namedtuple(
-    "DataPoint",
-    field_names=["state", "binary_label"]
+    field_names=["state", "action", "reward", "done", "new_state", "binary_label"],
 )
 
 
@@ -269,10 +264,7 @@ class RLAgent:
             info["next_question"]
         ]
 
-        exp = Experience(deepcopy(self.state), action, reward, done, new_state)
-        if not self.question: # if not None:
-            dp = DataPoint(deepcopy(self.state), self.question, info["correct_answer"])
-            self.classification_buffer.append(dp)
+        exp = Experience(deepcopy(self.state), action, reward, done, new_state, self.question)
 
         self.question = info["next_question"]
 
@@ -467,7 +459,7 @@ class DQNLightning(LightningModule):
         mse or huber batch loss
 
         """
-        states, actions, rewards, dones, next_states = batch
+        states, actions, rewards, dones, next_states, _ = batch
         state_action_values = (
             self.net(states[:3]).gather(1, actions.long().unsqueeze(-1)).squeeze(-1)
         )
@@ -488,6 +480,12 @@ class DQNLightning(LightningModule):
 
     def classification_loss(self, batch:[Tensor, Tensor]) -> Tensor:
         states, labels = batch 
+
+        # Take out all of the states that have a None value for its question 
+        idx = [i for i, state in enumerate(states) if i[3] != None]
+        states = states[idx]
+        labels = labels[idx]
+
         pred_label = self.net(states)
 
         answer_loss = labels * torch.log(pred_label) + (1 - labels) * torch.log(1 - pred_label)
@@ -565,6 +563,10 @@ class DQNLightning(LightningModule):
         # Soft update of target network
         if self.global_step % self.hparams.sync_rate == 0:
             self.target_net.load_state_dict(self.net.state_dict())
+        
+        # New code
+        classification_loss = self.classification_loss(batch)
+        loss += classification_loss
 
         return loss
 
