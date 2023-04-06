@@ -153,6 +153,9 @@ class Memory:
             f"{self.capacity}!"
         )
 
+    def get_memory(self):
+        return self.entries    
+
 
 class EpisodicMemory(Memory):
     """Episodic memory class."""
