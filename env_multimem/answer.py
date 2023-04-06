@@ -44,39 +44,39 @@ class Answer:
     def locate_objects(self):
         """REMINDER: Add get_memory function to memory.py"""
         self.short_episodic = self.memory["short"].get_memory() + self.memory["episodic"].get_memory()
-        self.short_episodic.sort(key=lambda x: x["timestamp"])
+        self.short_episodic.sort(key=lambda x: x["current_time"])
         self.semantic = self.memory["semantic"].get_memory()
         self.semantic.sort(key=lambda x: x["num_generalized"], reverse = True)
 
         # Locate each object through short + episodic
-        # assume key for each memory slot: human1, object1, relation, human2, object2, timestamp
+        # assume key for each memory slot: first_human, first_object, relation, second_human, second_object, current_time
         for info in self.short_episodic:
             # first item is object
-            if info["object1"] in objects:
-                full_name = info["human1"]+info["object1"]
+            if info["first_object"] in objects:
+                full_name = info["first_human"]+info["first_object"]
                 if full_name in self.all_objects:
                     # already created, then update
                     obj1 = self.all_objects[full_name]
                     obj1_small_loc = obj1.get_small_loc()
                     if info["relation"] == "AtLocation":
-                        if info["object2"] in small_locations:
+                        if info["second_object"] in small_locations:
                             # object at small location
                             if obj1_small_loc != placeholder:
                                 self.small_to_obj[obj1_small_loc].remove(full_name)
-                            self.all_objects[full_name].update_small_loc(info["object2"])
-                            self.all_objects[full_name].update_big_loc(self.small_to_big[info["object2"]])
-                            self.small_to_obj[info["object2"]].add(full_name)    
-                        elif info["object2"] in big_locations:
+                            self.all_objects[full_name].update_small_loc(info["second_object"])
+                            self.all_objects[full_name].update_big_loc(self.small_to_big[info["second_object"]])
+                            self.small_to_obj[info["second_object"]].add(full_name)    
+                        elif info["second_object"] in big_locations:
                             # object at big location
                             if obj1_small_loc != placeholder:
                                 self.small_to_obj[obj1_small_loc].remove(full_name)
                             self.all_objects[full_name].update_small_loc(placeholder)
-                            self.all_objects[full_name].update_big_loc(info["object2"])
+                            self.all_objects[full_name].update_big_loc(info["second_object"])
                     elif info["relation"] == "NextTo" :
                         # object next to object
                         if obj1_small_loc != placeholder:
                             self.small_to_obj[obj1_small_loc].remove(full_name)
-                        obj2 = self.all_objects[info["human2"]+info["object2"]]
+                        obj2 = self.all_objects[info["second_human"]+info["second_object"]]
                         obj2_small_loc = obj2.get_small_loc()
                         obj2_big_loc = obj2.get_big_loc()
                         if obj2_small_loc != placeholder:
@@ -89,50 +89,50 @@ class Answer:
                 else:
                     # object not created
                     if info["relation"] == "AtLocation":
-                        if info["object2"] in small_locations:
+                        if info["second_object"] in small_locations:
                             # object at small location
-                            self.all_objects[full_name] = Object({"human": info["human1"],"object":info["object1"],"small_location":info["object2"], "big_location":placeholder})
-                            self.small_to_obj[info["object2"]].add(full_name)    
-                        elif info["object2"] in big_locations:
+                            self.all_objects[full_name] = Object({"human": info["first_human"],"object":info["first_object"],"small_location":info["second_object"], "big_location":placeholder})
+                            self.small_to_obj[info["second_object"]].add(full_name)    
+                        elif info["second_object"] in big_locations:
                             # object at big location
-                            self.all_objects[full_name] = Object({"human": info["human1"],"object":info["object1"],"small_location":placeholder, "big_location":info["object2"]})
+                            self.all_objects[full_name] = Object({"human": info["first_human"],"object":info["first_object"],"small_location":placeholder, "big_location":info["second_object"]})
                     elif info["relation"] == "NextTo" :
                         # object next to object
-                        obj2 = self.all_objects[info["human2"]+info["object2"]]
+                        obj2 = self.all_objects[info["second_human"]+info["second_object"]]
                         obj2_small_loc = obj2.get_small_loc()
                         obj2_big_loc = obj2.get_big_loc()
                         if obj2_small_loc != placeholder:
                             self.small_to_obj[obj2_small_loc].add(full_name)
-                        self.all_objects[full_name] = Object({"human": info["human1"],"object":info["object1"],"small_location":obj2_small_loc, "big_location":obj2_big_loc}) 
+                        self.all_objects[full_name] = Object({"human": info["first_human"],"object":info["first_object"],"small_location":obj2_small_loc, "big_location":obj2_big_loc}) 
                     else:
                         # Error handle
                         pass      
 
-            elif info["object1"] in small_locations:
+            elif info["first_object"] in small_locations:
                 # first item is small location
                 if info["relation"] == "AtLocation":
-                    if info["object2"] in big_locations:
+                    if info["second_object"] in big_locations:
                         # small location at big location
-                        if self.small_to_big[info["object1"]] != placeholder:
-                            self.big_to_small[self.small_to_big[info["object1"]]].remove(info["object1"])
-                        self.small_to_big[info["object1"]] = info["object2"]
-                        self.big_to_small[info["object2"]].add(info["object1"])
-                        for obj_name in self.small_to_obj[info["object1"]]:
-                            self.all_objects[obj_name].update_big_loc(info["object2"])
+                        if self.small_to_big[info["first_object"]] != placeholder:
+                            self.big_to_small[self.small_to_big[info["first_object"]]].remove(info["first_object"])
+                        self.small_to_big[info["first_object"]] = info["second_object"]
+                        self.big_to_small[info["second_object"]].add(info["first_object"])
+                        for obj_name in self.small_to_obj[info["first_object"]]:
+                            self.all_objects[obj_name].update_big_loc(info["second_object"])
                     else:
                         # Error handle
                         pass
                 elif info["relation"] == "NextTo":
-                    if info["object2"] in small_locations:
+                    if info["second_object"] in small_locations:
                         # small location next to small location
-                        small_loc1_big = self.small_to_big[info["object1"]]
-                        small_loc2_big = self.small_to_big[info["object2"]]
+                        small_loc1_big = self.small_to_big[info["first_object"]]
+                        small_loc2_big = self.small_to_big[info["second_object"]]
                         if small_loc1_big != placeholder:
-                            self.big_to_small[small_loc1_big].remove(info["object1"])
-                        self.small_to_big[info["object1"]] = small_loc2_big
+                            self.big_to_small[small_loc1_big].remove(info["first_object"])
+                        self.small_to_big[info["first_object"]] = small_loc2_big
                         if small_loc2_big != placeholder:
-                            self.big_to_small[small_loc2_big].add(info["object1"])
-                        for obj_name in self.small_to_obj[info["object1"]]:
+                            self.big_to_small[small_loc2_big].add(info["first_object"])
+                        for obj_name in self.small_to_obj[info["first_object"]]:
                             self.all_objects[obj_name].update_big_loc(small_loc2_big)          
                     else:
                         # Error handle
@@ -146,7 +146,7 @@ class Answer:
                 pass
 
         # Use semantic to fill blanks
-        # assume key human1, object1, relation, human2, object2, strength
+        # assume key first_human, first_object, relation, second_human, second_object, strength
         # valid to first fill in small_loc?
         for obj_name in self.all_objects:
             small_loc = self.all_objects[obj_name].get_small_loc()
@@ -155,18 +155,18 @@ class Answer:
                 pass
             if small_loc == placeholder:
                 for info in self.semantic:
-                    if obj_name == info["human1"]+ info["object1"]:
+                    if obj_name == info["first_human"]+ info["first_object"]:
                         if info["relation"] == "AtLocation":
-                            if info["object2"] in small_locations:
+                            if info["second_object"] in small_locations:
                                 # semantic object at small location
-                                self.all_objects[obj_name].update_small_loc(info["object2"])
+                                self.all_objects[obj_name].update_small_loc(info["second_object"])
                                 break
-                            elif info["object2"] in big_locations and big_loc == placeholder:
+                            elif info["second_object"] in big_locations and big_loc == placeholder:
                                 # semantic object at big location
-                                self.all_objects[obj_name].update_big_loc(info["object2"])
+                                self.all_objects[obj_name].update_big_loc(info["second_object"])
                         elif info["relation"] == "NextTo":
-                            # semantic object1 next to object2 (we want is obj1)
-                            obj2 = self.all_objects[info["human2"]+info["object2"]]
+                            # semantic first_object next to second_object (we want is obj1)
+                            obj2 = self.all_objects[info["second_human"]+info["second_object"]]
                             obj2_small_loc = obj2.get_small_loc()
                             obj2_big_loc = obj2.get_big_loc()
                             if obj2_small_loc != placeholder:
@@ -174,9 +174,9 @@ class Answer:
                                 if obj2_big_loc != placeholder and big_loc == placeholder:
                                     self.all_objects[obj_name].update_big_loc(obj2_big_loc)
                                 break        
-                    elif obj_name == info["human2"]+ info["object2"] and info["relation"] == "NextTo":
-                        # semantic object1 next to object2 (we want is obj2)
-                        obj1 = self.all_objects[info["human1"]+info["object1"]]
+                    elif obj_name == info["second_human"]+ info["second_object"] and info["relation"] == "NextTo":
+                        # semantic first_object next to second_object (we want is obj2)
+                        obj1 = self.all_objects[info["first_human"]+info["first_object"]]
                         obj1_small_loc = obj1.get_small_loc()
                         obj1_big_loc = obj1.get_big_loc()
                         if obj1_small_loc != placeholder:
@@ -188,23 +188,23 @@ class Answer:
             # if after the filling big location still not sure
             if big_loc == placeholder:
                 for info in self.semantic:
-                    if obj_name == info["human1"]+ info["object1"]:
+                    if obj_name == info["first_human"]+ info["first_object"]:
                         if info["relation"] == "AtLocation":
-                            if info["object2"] in big_locations:
+                            if info["second_object"] in big_locations:
                                 # semantic object at big location
-                                self.all_objects[obj_name].update_big_loc(info["object2"])
+                                self.all_objects[obj_name].update_big_loc(info["second_object"])
                                 break
                         elif info["relation"] == "NextTo":
-                            # semantic object1 next to object2 (we want is obj1)
-                            obj2 = self.all_objects[info["human2"]+info["object2"]]
+                            # semantic first_object next to second_object (we want is obj1)
+                            obj2 = self.all_objects[info["second_human"]+info["second_object"]]
                             obj2_small_loc = obj2.get_small_loc()
                             obj2_big_loc = obj2.get_big_loc()
                             if obj2_small_loc == small_loc:
                                 self.all_objects[obj_name].update_big_loc(obj2_big_loc)
                                 break        
-                    elif obj_name == info["human2"]+ info["object2"] and info["relation"] == "NextTo":
-                        # semantic object1 next to object2 (we want is obj2)
-                        obj1 = self.all_objects[info["human1"]+info["object1"]]
+                    elif obj_name == info["second_human"]+ info["second_object"] and info["relation"] == "NextTo":
+                        # semantic first_object next to second_object (we want is obj2)
+                        obj1 = self.all_objects[info["first_human"]+info["first_object"]]
                         obj1_small_loc = obj1.get_small_loc()
                         obj1_big_loc = obj1.get_big_loc()
                         if obj1_small_loc == small_loc:
