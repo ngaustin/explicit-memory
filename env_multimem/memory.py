@@ -938,8 +938,8 @@ class SemanticMemory(Memory):
         logging.debug(f"Turning an observation {ob} into a semantic memory ...")
         mem = deepcopy(ob)
 
-        del mem["human"]
-        del mem["current_time"]
+        # del mem["human"]
+        # del mem["current_time"]
 
         # 1 stands for the 1 generalized.
         mem["num_generalized"] = 1

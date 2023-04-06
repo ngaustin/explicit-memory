@@ -15,6 +15,7 @@ from ..des import RoomDes
 from ..memory import EpisodicMemory, SemanticMemory, ShortMemory
 from ..policy import answer_question, encode_observation, manage_memory
 from ..utils import seed_everything
+from ..answer import Answer
 
 logging.basicConfig(
     level=os.environ.get("LOGLEVEL", "INFO").upper(),
@@ -153,6 +154,7 @@ class RoomEnv1(gym.Env):
         assert 0 < self.question_prob <= 1
 
         self.init_memory_systems()
+        self.answer_generator = Answer(self.memory_systems)
 
     # NOTE: This is unchanged
     def init_memory_systems(self) -> None:
@@ -202,7 +204,7 @@ class RoomEnv1(gym.Env):
                     first_object = state[first_human]["first_object"]
                     possible_questions_subjects.add((first_human, first_object))
             
-            self.question_sequence = []
+            self.question_sequence = []  # questions are in the form (first_human, first_object, relation, second_human, second_object)?
 
             for i in range(len(self.human_sequence)):
                 # Choose a random subject 
@@ -568,7 +570,6 @@ class RoomEnv1(gym.Env):
         truncated = False
 
         memory_action = actions["memory_management_action"]
-        filter_action = actions["filter_action"]
         answer_action = actions["answer_action"]
 
         # memory_action will never be None. Assume that the corresponding policy is always working
@@ -586,20 +587,22 @@ class RoomEnv1(gym.Env):
         else:
             if answer_action: # If not None, then an answer was passed into the method. Check that it is correct
                 assert answer_action == 1 or answer_action == 0
-                pred = 'yes' if answer_action == 1 else 'no'
-            else:  # Otherwise use the prediction by manually using the memory
-                if filter_action: # If there is a filter that was provided
-                    pred, correct_filter = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
-                else:  # Then use the filter to answer the question manually
-                    pred, correct_filter = answer_question(
-                        self.memory_systems, self.policies["question_answer"], self.question, None
-                    )
+                pred = True if answer_action == 1 else False
+            # else:  # Otherwise use the prediction by manually using the memory
+                # if filter_action: # If there is a filter that was provided
+                #     pred, correct_filter = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
+            else:  # Then use the filter to answer the question manually
+                pred = self.answer_generator.get_ans(self.question)
             if str(pred).lower() == self.answer:
                 reward = self.CORRECT
             else:
                 reward = self.WRONG
                 
-        correct_answer, correct_filter = answer_question(
+        # correct_answer, correct_filter = answer_question(
+        #     self.memory_systems, self.policies["question_answer"], self.question, None
+        # )
+
+        correct_answer = answer_question(
             self.memory_systems, self.policies["question_answer"], self.question, None
         )
 
@@ -614,7 +617,6 @@ class RoomEnv1(gym.Env):
         else:
             done = False
 
-        info["correct_filter"] = correct_filter
         info["correct_answer"] = correct_answer
         info["next_question"] = copy(self.question)
 

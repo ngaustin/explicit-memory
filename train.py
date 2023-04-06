@@ -39,7 +39,7 @@ Experience = namedtuple(
 
 DataPoint = namedtuple(
     "DataPoint",
-    field_names=["state", "binary_filter", "binary_label"]
+    field_names=["state", "binary_label"]
 )
 
 
@@ -133,7 +133,7 @@ class RLAgent:
         self,
         env: gym.Env,
         replay_buffer: ReplayBuffer,
-        filter_classification_buffer: ReplayBuffer,
+        classification_buffer: ReplayBuffer,
         capacity: dict,
         pretrain_semantic: bool,
         policies: dict,
@@ -155,7 +155,7 @@ class RLAgent:
         """
         self.env = env
         self.replay_buffer = replay_buffer
-        self.filter_classification_buffer = filter_classification_buffer
+        self.classification_buffer = classification_buffer
         self.capacity = capacity
         self.pretrain_semantic = pretrain_semantic
         self.policies = policies
@@ -226,13 +226,10 @@ class RLAgent:
             self.debug_dump.append(to_dump)
         
         # Include the question to have output a filter and answer
-        filter_and_answer = net(self.state)
-
-        memory_filter = filter_and_answer[:-1]  # TODO: Reshape this to match the memory structure
-        answer = filter_and_answer[-1]
+        answer = net(self.state)
 
         actions["memory_management_action"] = action 
-        actions["filter_action"] = memory_filter if self.pass_in_filter else None 
+        # actions["filter_action"] = memory_filter if self.pass_in_filter else None 
         actions["answer_action"] = answer if self.pass_in_answer else None 
 
         return actions
@@ -274,8 +271,8 @@ class RLAgent:
 
         exp = Experience(deepcopy(self.state), action, reward, done, new_state)
         if not self.question: # if not None:
-            dp = DataPoint(deepcopy(self.state), self.question, info["correct_filter"], info["correct_answer"])
-            self.filter_classification_buffer.append(dp)
+            dp = DataPoint(deepcopy(self.state), self.question, info["correct_answer"])
+            self.classification_buffer.append(dp)
 
         self.question = info["next_question"]
 
@@ -389,12 +386,12 @@ class DQNLightning(LightningModule):
 
         # TODO: Create a different buffer for filter training as well
         self.replay_buffer = ReplayBuffer(self.hparams.replay_size)
-        self.filter_classification_buffer = ReplayBuffer(self.hparams.replay_size)
+        self.classification_buffer = ReplayBuffer(self.hparams.replay_size)
 
         self.agent = RLAgent(
             env=self.env,
             replay_buffer=self.replay_buffer,
-            filter_classification_buffer=self.filter_classification_buffer,
+            classification_buffer=self.classification_buffer,
             capacity=self.hparams.capacity,
             pretrain_semantic=self.hparams.pretrain_semantic,
             policies=self.hparams.policies,
@@ -489,20 +486,15 @@ class DQNLightning(LightningModule):
         else:
             raise ValueError
 
-    def filter_classification_loss(self, batch:[Tensor, Tensor]) -> Tensor:
-        states, filters, labels = batch 
-        model_outputs = self.net(states)
-
-        pred_filter = model_outputs[:, :-1]
-        pred_label = model_outputs[:, -1]
+    def classification_loss(self, batch:[Tensor, Tensor]) -> Tensor:
+        states, labels = batch 
+        pred_label = self.net(states)
 
         answer_loss = labels * torch.log(pred_label) + (1 - labels) * torch.log(1 - pred_label)
-        filter_loss = filters * torch.log(pred_filter) + (1 - filters) * torch.log(1 - pred_filter)
 
         answer_loss = torch.mean(answer_loss)
-        filter_loss = torch.mean(torch.mean(filter_loss, dim=1), dim=0)
 
-        return answer_loss + filter_loss
+        return answer_loss
 
     def get_epsilon(self, start: int, end: int, eps_last_step: int) -> float:
         """Get the epsilon value. The scheduling is done lienarly.

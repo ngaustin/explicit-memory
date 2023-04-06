@@ -99,8 +99,8 @@ class LSTM(nn.Module):
             hidden_size * (len(self.memory_systems) + 1)
         )
 
-        # Final output for the question is binary filter of length corresponding to the entire memory capacity AND a single binary variable that is a yes/no answer
-        self.fc_final_question1 = nn.Linear(hidden_size * (len(self.memory_systems) + 1), self.capacity["episodic"] + self.capacity["semantic"] + self.capacity["short"] + 1)
+        # Final output for the question is a single binary variable that is a yes/no answer
+        self.fc_final_question1 = nn.Linear(hidden_size * (len(self.memory_systems) + 1), 1)
         
 
         # Continue original code
