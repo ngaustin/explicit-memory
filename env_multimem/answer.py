@@ -44,12 +44,19 @@ class Answer:
     def locate_objects(self):
         """REMINDER: Add get_memory function to memory.py"""
         self.short_episodic = self.memory["short"].get_memory() + self.memory["episodic"].get_memory()
-        self.short_episodic.sort(key=lambda x: x["current_time"])
+        self.short_episodic.sort(key=lambda x: x["timestamp"])
         self.semantic = self.memory["semantic"].get_memory()
         self.semantic.sort(key=lambda x: x["num_generalized"], reverse = True)
 
+        print("start print memory+++++++++++")
+        print("short-episodic:")
+        print(self.short_episodic)
+        print("semantic:")
+        print(self.semantic)
+        print("end print memory+++++++++++++")
+
         # Locate each object through short + episodic
-        # assume key for each memory slot: first_human, first_object, relation, second_human, second_object, current_time
+        # assume key for each memory slot: first_human, first_object, relation, second_human, second_object, timestamp
         for info in self.short_episodic:
             # first item is object
             if info["first_object"] in objects:
@@ -212,7 +219,9 @@ class Answer:
                             break               
 
 
-
+    def print_obj_state(self):
+        for item in self.all_objects:
+            print("{human:", item.human, ", name:", item.name, ", small_loc:", item.small_loc, ", big_loc:", item.big_loc, "}")
 
 
     def get_ans(self, question):
@@ -220,6 +229,10 @@ class Answer:
         """Here we do not consider nextto relation between different level"""
         """Not sure answer possible?"""
         self.locate_objects()
+        print("start++++++++++++++++++++")
+        print(question)
+        print(self.print_obj_state())
+        print("end++++++++++++++++")
         if question[1] in objects:
             if question[2] == "AtLocation":
                 # question object at small/big location
