@@ -224,7 +224,6 @@ class RLAgent:
         answer = net(self.state)
 
         actions["memory_management_action"] = action 
-        # actions["filter_action"] = memory_filter if self.pass_in_filter else None 
         actions["answer_action"] = int(round(answer.item())) if self.pass_in_answer else None 
 
         return actions

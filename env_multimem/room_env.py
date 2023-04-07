@@ -257,6 +257,8 @@ class RoomEnv1(gym.Env):
 
             assert len(possible_questions) == len(set(possible_questions))
 
+            self.des._initialize()
+
         else:
             """
             self.question_sequence = [self.human_sequence[0]]
@@ -297,6 +299,7 @@ class RoomEnv1(gym.Env):
                 effective_question_sequence.append(question)
             else:
                 effective_question_sequence.append(None)
+            
         # The last observation shouldn't have a question
         effective_question_sequence.append(None)
         self.question_sequence = effective_question_sequence
@@ -409,6 +412,7 @@ class RoomEnv1(gym.Env):
             increment_des=False
         )
 
+
         encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
         encode_observation(self.ground_truth_memory_systems, "argmax", self.obs)
 
@@ -491,6 +495,7 @@ class RoomEnv1(gym.Env):
 
         # NOTE: Put the memory into the ground_truth memory system as well 
         encode_observation(self.ground_truth_memory_systems, "argmax", self.obs)
+        print("short", self.ground_truth_memory_systems["short"].entries)
 
 
         state = deepcopy(self.extract_memory_entires(self.memory_systems))
