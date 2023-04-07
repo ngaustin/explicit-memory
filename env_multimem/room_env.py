@@ -199,49 +199,63 @@ class RoomEnv1(gym.Env):
 
             # For now, just sample all combinations of object-object, object-small location, small-location relations.
             # Might need to change so that we have more equal distribution of yes/no answers
-
-            # Get all of the first_human and first_object relations at the very least from states
-            self.question_sequence = []
-
-            possible_questions_subjects = set()  # set of tuples (first_human, first_objects) that are mentioned in the env
-
-            for state in self.des.states: 
-                for first_human in state.keys():
-                    first_object = state[first_human]["first_object"]
-                    possible_questions_subjects.add((first_human, first_object))
-                
-            possible_questions_subjects = list(possible_questions_subjects)
             
             self.question_sequence = []  # questions are in the form (first_human, first_object, relation, second_human, second_object)?
+            self.des.run()
+            possible_objects = set()
+            possible_small_locations = set()
+            possible_big_locations = set()
+
+            possible_questions = []
 
             for i in range(len(self.human_sequence)):
-                # Choose a random subject 
-                subject = random.choice(possible_questions_subjects)
-                choice = random.choice([1, 2])
-                if subject[1] in self.des.objects: 
-                    # Choose object or small location relation 
-                    if choice == 1:
-                        # Find another human's object that doesn't equal the current subject
-                        curr_object = deepcopy(subject)
-                        while curr_object != subject and curr_object[1] not in self.des.objects: 
-                            curr_object = randomchoice(possible_questions_subjects)
-                        self.question_sequence.append((subject[0], subject[1], "NextTo", curr_object[0], curr_object[1]))
-                    else:
-                        # AtLocation small Locaiton 
-                        small_location = random.choice(self.des.small_locations)
-                        self.question_sequence.append((subject[0], subject[1], "AtLocation", "Nature", small_location))
-                if subject[1] in self.des.small_locations:
-                    if choice == 1:
-                        # NExtTo small location
-                        # Find a small location that doesn't equal the current subject 
-                        curr_object = deepcopy(subject)
-                        while curr_object != subject and curr_object[1] not in self.des.small_locations: 
-                            curr_object = randomchoice(possible_questions_subjects)
-                        self.question_sequence.append((subject[0], subject[1], "NextTo", curr_object[0], curr_object[1]))
-                    else:
-                        # AtLocation big location
-                        big_location = random.choice(self.des.big_locations)
-                        self.question_sequence.append((subject[0], subject[1], "AtLocation", "Nature", big_location))
+                # Each human represents the observation that is going to be given. Add 
+                human = self.human_sequence[i]
+                state = self.des.states[i]
+                human_object = state[human]["first_object"]
+
+                new_entities = {"object": None, "small_location": None, "big_location": None}
+
+                if human == "Nature":
+                    if (human, human_object) not in possible_small_locations: 
+                        new_entities["small_location"] = (human, human_object)
+                    possible_small_locations.add((human, human_object))
+                    if state[human]["relation"] == "AtLocation":
+                        if ("Nature", state[human]["second_object"]) not in possible_big_locations:
+                            new_entities["big_location"] = ("Nature", state[human]["second_object"])
+                        possible_big_locations.add(("Nature", state[human]["second_object"]))
+                else:
+                    if (human, human_object) not in possible_objects:
+                        new_entities["object"] = (human, human_object)
+                    possible_objects.add((human, human_object))
+
+                if new_entities["object"]:
+                    for o in possible_objects:
+                        if o != new_entities["object"]:
+                            possible_questions.append((o[0], o[1], "NextTo", new_entities["object"][0], new_entities["object"][1]))
+                    for s in possible_small_locations:
+                        possible_questions.append((new_entities["object"][0], new_entities["object"][1], "AtLocation", s[0], s[1]))
+                if new_entities["small_location"]:
+                    for o in possible_objects:
+                        if o != new_entities["object"]:
+                            possible_questions.append((o[0], o[1], "AtLocation", new_entities["small_location"][0], new_entities["small_location"][1]))
+                    for s in possible_small_locations:
+                        if s != new_entities["small_location"]:
+                            possible_questions.append((s[0], s[1], "NextTo", new_entities["small_location"][0], new_entities["small_location"][1]))
+                    for b in possible_big_locations:
+                        possible_questions.append((new_entities["small_location"][0], new_entities["small_location"][1], "AtLocation", b[0], b[1]))
+                if new_entities["big_location"]:
+                    for s in possible_small_locations:
+                        if s != new_entities["small_location"]:
+                            possible_questions.append((s[0], s[1], "AtLocation", new_entities["big_location"][0], new_entities["big_location"][1]))
+
+                
+                if len(possible_questions) == 0:
+                    self.question_sequence.append(None)
+                else:
+                    self.question_sequence.append(random.choice(possible_questions))
+
+            assert len(possible_questions) == len(set(possible_questions))
 
         else:
             """
@@ -279,7 +293,7 @@ class RoomEnv1(gym.Env):
 
         effective_question_sequence = []
         for i, question in enumerate(self.question_sequence[:-1]):
-            if random.random() < self.question_prob:
+            if random.random() < self.question_prob and question:  # make sure the question is not None
                 effective_question_sequence.append(question)
             else:
                 effective_question_sequence.append(None)
