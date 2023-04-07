@@ -1,10 +1,12 @@
 from .memory import *
 
-people = ["Nature", "Michael", "Kai", "Cameron", "Joy", "Laura"],
-objects = ["laptop", "bottle", "pencil", "cushion", "phone"],
-small_locations = ["table", "couch", "bed", "chair", "stool"],
+people = ["Nature", "Michael", "Kai", "Cameron", "Joy", "Laura"]
+objects = ["laptop", "bottle", "pencil", "cushion", "phone"]
+small_locations = ["table", "couch", "bed", "chair", "stool"]
 big_locations = ["Study", "Garage", "Living Room", "Kitchen"]
 placeholder = "?"
+
+
 
 class Object:
     def __init__(self, info) -> None:
@@ -23,6 +25,14 @@ class Object:
     def update_big_loc(self, big_loc):
         """Update the big location of the object"""
         self.big_loc = big_loc
+
+    def get_human(self):
+        """Get the human of the object"""
+        return self.human
+
+    def get_big_loc(self):
+        """Get the name of the object"""
+        return self.name  
 
     def get_small_loc(self):
         """Get the small location of the object"""
@@ -48,17 +58,19 @@ class Answer:
 
         self.semantic.sort(key=lambda x: x["num_generalized"], reverse = True)
         
-        print("start print memory+++++++++++")
-        print("short-episodic:")
-        print(self.short_episodic[:2])
-        print("semantic:")
-        print(self.semantic[:2])
-        print("end print memory+++++++++++++")
+        # print("start print memory+++++++++++")
+        # print("short-episodic:")
+        # print(self.short_episodic[:2])
+        # print("semantic:")
+        # print(self.semantic[:2])
+        # print("end print memory+++++++++++++")
         
         # Locate each object through short + episodic
         # assume key for each memory slot: first_human, first_object, relation, second_human, second_object, timestamp
+        # print("length", len(self.short_episodic))
         for info in self.short_episodic:
             # first item is object
+            # print("+++", info)
             if info["first_object"] in objects:
                 full_name = info["first_human"]+info["first_object"]
                 if full_name in self.all_objects:
@@ -229,6 +241,11 @@ class Answer:
         """Here we do not consider nextto relation between different level"""
         """Not sure answer possible?"""
         self.locate_objects(memory)
+        # print("printing objects")
+        # for _, item in self.all_objects.items():
+        #     print("{human:", item.get_human(), ", name:", item.get_name(), ", small_loc:", item.get_small_loc(), ", big_loc:", item.get_big_loc(), "}")
+        # print("finish printing state")
+        # print(question)
         if question[1] in objects:
             if question[2] == "AtLocation":
                 # question object at small/big location
@@ -248,7 +265,7 @@ class Answer:
                 return question[1] in self.big_to_small[question[4]]
             elif question[2] == "NextTo":
                 #question small location next to small location
-                for _,small_locs in self.big_to_small:
+                for _,small_locs in self.big_to_small.items():
                     if question[1] in small_locs and question[4] in small_locs:
                         return True
                 return False       
