@@ -219,6 +219,7 @@ class Answer:
         """Assume the input as (human, object, at/nextto, human, object) and is valid"""
         """Here we do not consider nextto relation between different level"""
         """Not sure answer possible?"""
+        self.locate_objects()
         if question[1] in objects:
             if question[2] == "AtLocation":
                 # question object at small/big location
