@@ -3,44 +3,45 @@
         "people": ["Nature", "Michael", "Kai", "Cameron", "Joy", "Laura"],
         "objects": ["laptop", "bottle", "pencil", "cushion", "phone"],
         "small_locations": ["table", "couch", "bed", "chair", "stool"],
-        "large_locations": ["Study", "Garage", "Living Room", "Kitchen"]
+        "large_locations": ["Study", "Garage", "Living Room", "Kitchen"],
+        "relations": ["AtLocation", "NextTo"]
     },
     "components": {
         "Nature": [
             [
                 "table",
                 "AtLocation",
-                "None",
+                "Nature",
                 "Kitchen"
             ], 
             [
                 "couch",
                 "AtLocation",
-                "None",
+                "Nature",
                 "Living Room"
             ], 
             [
                 "bed",
                 "AtLocation",
-                "None",
+                "Nature",
                 "Garage"
             ], 
             [
                 "chair",
                 "NextTo",
-                "None",
+                "Nature",
                 "table"
             ], 
             [
                 "stool",
                 "NextTo",
-                "None",
+                "Nature",
                 "bed"
             ], 
             [
                 "table",   
                 "AtLocation",
-                "None",
+                "Nature",
                 "Study"
             ]
         ],
@@ -48,7 +49,7 @@
             [
                 "laptop",
                 "AtLocation",
-                "None",
+                "Nature",
                 "table"
             ],
             [
@@ -60,13 +61,13 @@
             [
                 "laptop",
                 "AtLocation",
-                "None",
+                "Nature",
                 "table"
             ], 
             [
                 "laptop",
                 "AtLocation",
-                "None",
+                "Nature",
                 "table"
             ]
         ],
@@ -74,13 +75,13 @@
             [
                 "laptop",
                 "AtLocation",
-                "None",
+                "Nature",
                 "couch"
             ], 
             [
                 "laptop",
                 "AtLocation",
-                "None",
+                "Nature",
                 "couch"
             ],
             [
@@ -94,20 +95,20 @@
             [
                 "cushion",
                 "AtLocation",
-                "None",
-                "Chair"   
+                "Nature",
+                "chair"   
             ], 
             [
-                "shoes",
+                "bottle",
                 "AtLocation",
-                "None",
+                "Nature",
                 "stool"
             ], 
             [
                 "cushion",
                 "AtLocation",
-                "None",
-                "Chair"
+                "Nature",
+                "chair"
             ], 
             [
                 "phone",
@@ -126,7 +127,7 @@
             [
                 "laptop",
                 "AtLocation",
-                "None",
+                "Nature",
                 "table" 
             ],
             [
@@ -138,15 +139,15 @@
             [
                 "bottle",
                 "AtLocation",
-                "None",
-                "Bed"
+                "Nature",
+                "bed"
             ]
         ],
         "Joy": [
             [
                 "cushion",
                 "AtLocation",
-                "None",
+                "Nature",
                 "stool"
             ], 
             [
@@ -164,26 +165,26 @@
             [
                 "cushion",
                 "AtLocation",
-                "None",
+                "Nature",
                 "stool"
             ], 
             [
                 "phone",
                 "AtLocation",
-                "None",
-                "Table"
+                "Nature",
+                "table"
             ],
             [
                 "laptop",
                 "NextTo",
                 "Joy",
-                "Phone"
+                "phone"
             ],
             [
                 "laptop",
                 "NextTo",
                 "Joy",
-                "Phone"
+                "phone"
             ]
         ]
     },

@@ -93,7 +93,7 @@ def manage_memory(memory_systems: dict, policy: str) -> None:
     memory_systems["short"].forget_oldest()
 
 
-def answer_question(memory_systems: dict, policy: str, question: dict, memory_filter:dict | None) -> str:
+def answer_question(memory_systems: dict, policy: str) -> str:
     """Non RL question answering policy.
 
     Args

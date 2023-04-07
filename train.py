@@ -24,7 +24,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataset import IterableDataset
 
-from env_multimem_room_env import RoomEnv
+from env_multimem.room_env import RoomEnv1
 
 from utils import write_json
 
@@ -160,7 +160,7 @@ class RLAgent:
 
         # NOTE: This toggles the difficulty of our method 
         self.pass_in_filter = False 
-        self.pass_in_answer = False
+        self.pass_in_answer = True
 
         self.reset()
 
@@ -185,7 +185,7 @@ class RLAgent:
             str(self.state["episodic"]),
             str(self.state["semantic"]),
             str(self.state["short"]),
-            None
+            []
         ]
 
     def get_action(
@@ -221,11 +221,13 @@ class RLAgent:
             self.debug_dump.append(to_dump)
         
         # Include the question to have output a filter and answer
+        print("Current state: ", self.state)
         answer = net(self.state)
+        print("Answer: ", answer)
 
         actions["memory_management_action"] = action 
         # actions["filter_action"] = memory_filter if self.pass_in_filter else None 
-        actions["answer_action"] = answer if self.pass_in_answer else None 
+        actions["answer_action"] = int(round(answer.item())) if self.pass_in_answer else None 
 
         return actions
 
@@ -261,7 +263,7 @@ class RLAgent:
             str(new_state["episodic"]),
             str(new_state["semantic"]),
             str(new_state["short"]),
-            info["next_question"]
+            [info["next_question"]]
         ]
 
         exp = Experience(deepcopy(self.state), action, reward, done, new_state, self.question)
@@ -361,8 +363,7 @@ class DQNLightning(LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.env = RoomEnv(
-                "RoomEnv-v1",
+        self.env = RoomEnv1(
                 des_size=self.hparams.des_size,
                 seed=self.hparams.seed,
                 policies=self.hparams.policies,
@@ -397,11 +398,11 @@ class DQNLightning(LightningModule):
         self.hparams.nn_params["n_actions"] = self.agent.action_space.n
         # TODO: Change this to account for the code changes in environment (first_human...etc.)
         self.hparams.nn_params["entities"] = {
-            "first_humans": self.env.des.first_humans,
-            "first_objects": self.env.des.first_objects,
+            "people": self.env.des.people,
+            "objects": self.env.des.objects,
+            "small_locations": self.env.des.small_locations,
+            "big_locations": self.env.des.big_locations,
             "relations": self.env.des.relations,
-            "second_humans": self.env.des.second_humans,
-            "second_objects": self.env.des.second_objects,
         }
         self.hparams.nn_params["capacity"] = self.hparams.capacity
         self.hparams.nn_params["accelerator"] = self.hparams["accelerator"]

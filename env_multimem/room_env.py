@@ -11,11 +11,11 @@ from typing import Tuple
 
 import gymnasium as gym
 
-from ..des import RoomDes
-from ..memory import EpisodicMemory, SemanticMemory, ShortMemory
-from ..policy import answer_question, encode_observation, manage_memory
-from ..utils import seed_everything
-from ..answer import Answer
+from .des import RoomDes
+from .memory import EpisodicMemory, SemanticMemory, ShortMemory
+from .policy import answer_question, encode_observation, manage_memory
+from .utils import seed_everything
+from .answer import Answer
 
 logging.basicConfig(
     level=os.environ.get("LOGLEVEL", "INFO").upper(),
@@ -179,11 +179,11 @@ class RoomEnv1(gym.Env):
         if self.observation_params.lower() == "perfect":
             if self.allow_random_human:
                 self.human_sequence = random.choices(
-                    list(self.des.humans), k=self.des.until + 1
+                    list(self.des.first_humans), k=self.des.until + 1
                 )
             else:
                 self.human_sequence = (
-                    self.des.humans * (self.des.until // len(self.des.humans) + 1)
+                    self.des.first_humans * (self.des.until // len(self.des.first_humans) + 1)
                 )[: self.des.until + 1]
         else:
             raise NotImplementedError
@@ -197,12 +197,14 @@ class RoomEnv1(gym.Env):
             # Get all of the first_human and first_object relations at the very least from states
             self.question_sequence = []
 
-            possible_questions_subjects = {}  # set of tuples (first_human, first_objects) that are mentioned in the env
+            possible_questions_subjects = set()  # set of tuples (first_human, first_objects) that are mentioned in the env
 
             for state in self.des.states: 
                 for first_human in state.keys():
                     first_object = state[first_human]["first_object"]
                     possible_questions_subjects.add((first_human, first_object))
+                
+            possible_questions_subjects = list(possible_questions_subjects)
             
             self.question_sequence = []  # questions are in the form (first_human, first_object, relation, second_human, second_object)?
 
@@ -214,26 +216,26 @@ class RoomEnv1(gym.Env):
                     # Choose object or small location relation 
                     if choice == 1:
                         # Find another human's object that doesn't equal the current subject
-                        curr_object = copy(subject)
+                        curr_object = deepcopy(subject)
                         while curr_object != subject and curr_object[1] not in self.des.objects: 
                             curr_object = randomchoice(possible_questions_subjects)
                         self.question_sequence.append((subject[0], subject[1], "NextTo", curr_object[0], curr_object[1]))
                     else:
                         # AtLocation small Locaiton 
                         small_location = random.choice(self.des.small_locations)
-                        self.question_sequence.append((subject[0], subject[1], "AtLocation", "None", small_location))
+                        self.question_sequence.append((subject[0], subject[1], "AtLocation", "Nature", small_location))
                 if subject[1] in self.des.small_locations:
                     if choice == 1:
                         # NExtTo small location
                         # Find a small location that doesn't equal the current subject 
-                        curr_object = copy(subject)
+                        curr_object = deepcopy(subject)
                         while curr_object != subject and curr_object[1] not in self.des.small_locations: 
                             curr_object = randomchoice(possible_questions_subjects)
                         self.question_sequence.append((subject[0], subject[1], "NextTo", curr_object[0], curr_object[1]))
                     else:
                         # AtLocation big location
                         big_location = random.choice(self.des.big_locations)
-                        self.question_sequence.append((subject[0], subject[1], "AtLocation", "None", big_location))
+                        self.question_sequence.append((subject[0], subject[1], "AtLocation", "Nature", big_location))
 
         else:
             """
@@ -331,7 +333,7 @@ class RoomEnv1(gym.Env):
 
         """
         first_human = self.human_sequence.pop(0)
-        question = self.question_sequence.pop(0)
+        human_q = self.question_sequence.pop(0)
 
         is_last_o = len(self.human_sequence) == 0
         is_last_q = len(self.question_sequence) == 0
@@ -362,8 +364,8 @@ class RoomEnv1(gym.Env):
             # human_q is already a quintuple
 
             question = deepcopy(human_q)
-            answer = deepcopy(obj_loc_q)  # TODO: We need to "presolve" the environment using Steven's code so that, given the timestep, we know the location of every item and insert here
-
+            # TODO: Insert ground truth label here for answer to question
+            answer = 1 # deepcopy(obj_loc_q)  
         else:
             question = None
             answer = None
@@ -420,7 +422,7 @@ class RoomEnv1(gym.Env):
                     }, info
 
         raise ValueError
-"""
+    """
     def step(self, action: int) -> Tuple[Tuple, int, bool, bool, dict]:
         An agent takes an action.
 
@@ -539,7 +541,7 @@ class RoomEnv1(gym.Env):
                     }
 
                     return state, reward, done, truncated, info
-"""
+    """
     # TODO: Change this to allow training of both the memory management AND the memory filter
     # When you take a step, you idealy want to take in the action for memory management
     # That action may have already accounted for the filtered memory 
@@ -602,9 +604,7 @@ class RoomEnv1(gym.Env):
         #     self.memory_systems, self.policies["question_answer"], self.question, None
         # )
 
-        correct_answer = answer_question(
-            self.memory_systems, self.policies["question_answer"], self.question, None
-        )
+        correct_answer = self.answer_generator.get_ans(self.question)
 
         self.obs, self.question, self.answer, self.is_last = self.generate_oqa(
             increment_des=True
@@ -618,7 +618,7 @@ class RoomEnv1(gym.Env):
             done = False
 
         info["correct_answer"] = correct_answer
-        info["next_question"] = copy(self.question)
+        info["next_question"] = deepcopy(self.question)
 
         return state, reward, done, truncated, info
 

@@ -115,30 +115,20 @@ class LSTM(nn.Module):
         """Create learnable embeddings."""
         self.word2idx = (
             ["<PAD>"]
-            + self.entities["first_humans"]
-            + self.entities["first_objects"]
+            + self.entities["people"]
+            + self.entities["objects"]
+            + self.entities["small_locations"]
+            + self.entities["big_locations"]
             + self.entities["relations"]
-            + self.entities["second_humans"]
-            + self.entities["second_objects"]
         )
         self.word2idx = {word: idx for idx, word in enumerate(self.word2idx)}
         self.embeddings = nn.Embedding(
             len(self.word2idx), self.embedding_dim, device=self.device, padding_idx=0
         )
-        self.input_size_s = self.embedding_dim * 2
+        self.input_size_s = self.embedding_dim * 5
+        self.input_size_o = self.embedding_dim * 5
+        self.input_size_e = self.embedding_dim * 5
 
-        if (self.include_human is None) or (self.include_human.lower() == "sum"):
-            self.input_size_e = self.embedding_dim * 2
-            self.input_size_o = self.embedding_dim * 2
-
-        elif self.include_human.lower() == "concat":
-            self.input_size_e = self.embedding_dim * 3
-            self.input_size_o = self.embedding_dim * 3
-        else:
-            raise ValueError(
-                "include_human should be one of None, 'sum', or 'concat', "
-                f"but {self.include_human} was given!"
-            )
     
     def make_embedding_question(self, question: tuple) -> torch.Tensor:
         first_human, first_object, relation, second_human, second_object = question
@@ -164,6 +154,7 @@ class LSTM(nn.Module):
     def create_batch_question(self, questions):
         batch = []
         for q in questions: 
+            print(q)
             batch.append(self.make_embedding_question(q))
         batch = torch.stack(batch)
 
@@ -184,43 +175,23 @@ class LSTM(nn.Module):
         one embedding vector made from one memory element.
 
         """
-        object_embedding = self.embeddings(
-            torch.tensor(self.word2idx[mem["object"]], device=self.device)
+        first_human_embedding = self.embeddings(
+            torch.tensor(self.word2idx[mem["first_human"]], device=self.device)
         )
-        object_location_embedding = self.embeddings(
-            torch.tensor(self.word2idx[mem["object_location"]], device=self.device)
+        first_object_embedding = self.embeddings(
+            torch.tensor(self.word2idx[mem["first_object"]], device=self.device)
+        )
+        relation = self.embeddings(
+            torch.tensor(self.word2idx[mem["relation"]], device=self.device)
+        )
+        second_human_embedding = self.embeddings(
+            torch.tensor(self.word2idx[mem["second_human"]], device=self.device)
+        )
+        second_object_embedding = self.embeddings(
+            torch.tensor(self.word2idx[mem["second_object"]], device=self.device)
         )
 
-        if memory_type.lower() == "semantic":
-            final_embedding = torch.concat(
-                [object_embedding, object_location_embedding]
-            )
-
-        elif memory_type.lower() in ["episodic", "short"]:
-            human_embedding = self.embeddings(
-                torch.tensor(self.word2idx[mem["human"]], device=self.device)
-            )
-
-            if self.include_human is None:
-                final_embedding = torch.concat(
-                    [object_embedding, object_location_embedding]
-                )
-            elif self.include_human.lower() == "sum":
-                final_embedding = [object_embedding + human_embedding]
-
-                if self.human_embedding_on_object_location:
-                    final_embedding.append(object_location_embedding + human_embedding)
-                else:
-                    final_embedding.append(object_location_embedding)
-
-                final_embedding = torch.concat(final_embedding)
-
-            elif self.include_human.lower() == "concat":
-                final_embedding = torch.concat(
-                    [human_embedding, object_embedding, object_location_embedding]
-                )
-        else:
-            raise ValueError
+        final_embedding = torch.concat([first_human_embedding, first_object_embedding, relation, second_human_embedding, second_object_embedding])
 
         return final_embedding
 
@@ -245,17 +216,22 @@ class LSTM(nn.Module):
 
             if memory_type == "semantic":
                 mem_pad = {
-                    "object": "<PAD>",
-                    "object_location": "<PAD>",
-                    "num_generalized": "<PAD>",
-                }
+                "first_human":"<PAD>", 
+                "first_object":"<PAD>",
+                "relation":"<PAD>",
+                "second_human":"<PAD>",
+                "second_object":"<PAD>",
+                "num_generalized":"<PAD>"
+            }
             elif memory_type in ["episodic", "short"]:
-                mem_pad = {
-                    "human": "<PAD>",
-                    "object": "<PAD>",
-                    "object_location": "<PAD>",
-                    "timestamp": "<PAD>",
-                }
+                 mem_pad = {
+                "first_human":"<PAD>", 
+                "first_object":"<PAD>",
+                "relation":"<PAD>",
+                "second_human":"<PAD>",
+                "second_object":"<PAD>",
+                "timestamp":"<PAD>"
+            }
             else:
                 raise ValueError
 
@@ -325,12 +301,17 @@ class LSTM(nn.Module):
             )
             to_concat.append(fc_out_o)
         
-        if len(x_) > 3: # Question, filter, and answer were also passed in
-            batch_q = self.create_batch_question(x_[3])  
-            res = self.fc_q1(self.relu(self.fc_q0(batch_z)))
-            memory_and_question = to_concat.append(res)
-            fc_out = self.sigmoid(self.fc_final_question1(self.relu(self.fc_final_question0(memory_and_question))))
-            return fc_out 
+        if len(x_) > 3: # Question was also passed in
+            if x_[3]:  # Make sure not None 
+                batch_q = self.create_batch_question(x_[3])  
+                res = self.fc_q1(self.relu(self.fc_q0(batch_q)))
+                to_concat.append(res)
+                fc_out_all = torch.concat(to_concat, dim=-1)
+                fc_out = self.fc_final_question1(self.relu(self.fc_final_question0(fc_out_all)))
+                fc_out = torch.nn.Sigmoid()(fc_out)
+                return fc_out 
+            else:
+                return torch.tensor([[0]])
 
         # dim=-1 is the feature dimension
         fc_out_all = torch.concat(to_concat, dim=-1)

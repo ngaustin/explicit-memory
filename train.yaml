@@ -1,5 +1,5 @@
-allow_random_human: false
-allow_random_question: false
+allow_random_human: true
+allow_random_question: true
 pretrain_semantic: false
 varying_rewards: false
 seed: 0

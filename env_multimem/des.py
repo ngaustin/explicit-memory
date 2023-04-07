@@ -68,7 +68,7 @@ class RoomDes:
                 "l",
             ]
             # TODO: Create a json file that consists of humans, objects, small locations, and big locations
-            self.config = read_json(f"./data/des-config-{des_size.lower()}-v1.json")
+            self.config = read_json(f"../data/env_multimem.json")
         else:
             self.config = des_size
         self.check_resources = check_resources
@@ -77,7 +77,7 @@ class RoomDes:
     def _initialize(self) -> None:
         """Initialize the simulator."""
         self.components = deepcopy(self.config["components"])
-        self.resources = deepcopy(self.config["resources"])
+        # self.resources = deepcopy(self.config["resources"])
         self.semantic_knowledge = deepcopy(self.config["semantic_knowledge"])
 
         self.component_list = deepcopy(self.config["component_list"])
@@ -85,7 +85,8 @@ class RoomDes:
         self.people = self.component_list["people"]
         self.objects = self.component_list["objects"]
         self.small_locations = self.component_list["small_locations"]
-        self.large_locations = self.component_list["large_locations"]
+        self.big_locations = self.component_list["large_locations"]
+        self.relations = self.component_list["relations"]
 
         # TODO: Also initialize small/big locations
         
@@ -93,17 +94,17 @@ class RoomDes:
         self.first_objects = []
         self.relations = []
         self.second_humans = []
-        self.second_object = []
+        self.second_objects = []
 
         # TODO: Components will no longer be about just humans but also objects next to other objects, or at small locations etc. 
         for first_human, info in self.components.items():
 
-            # First human and second human may be None, depending on whether the relation requires it...options listed below
+            # First human and second human may be Nature, depending on whether the relation requires it...options listed below
 
             # 1. (Human, Object, NextTo, Human Object) 
-            # 2. (Human, Object, AtLocation, None, SmallLocation)
-            # 3. (None, SmallLocation, AtLocation, None, BigLocation)
-            # 4. (None, SmallLocation, NextTo, None, SmallLocation) 
+            # 2. (Human, Object, AtLocation, Nature, SmallLocation)
+            # 3. (Nature, SmallLocation, AtLocation, Nature, BigLocation)
+            # 4. (Nature, SmallLocation, NextTo, Nature, SmallLocation) 
 
 
             # TODO: Each item in obj_locs will be: 
@@ -148,7 +149,7 @@ class RoomDes:
     def step(self) -> None:
         """Proceed time by one."""
         previous_state = deepcopy(self.state)
-        previous_resources = deepcopy(self.resources)
+        # previous_resources = deepcopy(self.resources)
 
         self.current_time += 1
 
@@ -169,9 +170,9 @@ class RoomDes:
             ) = self.components[human][object_location_idx]
 
         current_state = deepcopy(self.state)
-        current_resources = deepcopy(self.resources)
+        # current_resources = deepcopy(self.resources)
         self.event = self.check_event(
-            previous_state, previous_resources, current_state, current_resources
+            previous_state, current_state
         )
         self.events.append(deepcopy(self.event))
         self.states.append(deepcopy(self.state))
@@ -179,9 +180,7 @@ class RoomDes:
     def check_event(
         self,
         previous_state: dict,
-        previous_resources: dict,
-        current_state: dict,
-        current_resources: dict,
+        current_state: dict
     ) -> dict:
         """Check if any events have occured between the two consecutive states.
 
@@ -198,7 +197,6 @@ class RoomDes:
 
         """
         assert len(previous_state) == len(current_state)
-        assert len(previous_resources) == len(current_resources)
 
         state_changes = {}
 

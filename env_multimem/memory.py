@@ -633,7 +633,6 @@ class ShortMemory(Memory):
         """
         sem = deepcopy(short)
 
-        del sem["human"]
         del sem["timestamp"]
         sem["num_generalized"] = 1
 
