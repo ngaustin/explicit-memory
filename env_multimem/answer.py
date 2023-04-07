@@ -34,27 +34,27 @@ class Object:
 
 
 class Answer:
-    def __init__(self, memory) -> None:
-        self.memory = memory
+    def __init__(self) -> None:
         self.all_objects = {}
         self.big_to_small = {"Study":set(()), "Garage":set(()), "Living Room":set(()), "Kitchen":set(())}
         self.small_to_big = {"table":placeholder, "couch":placeholder, "bed":placeholder, "chair":placeholder, "stool":placeholder}
         self.small_to_obj = {"table":set(()), "couch":set(()), "bed":set(()), "chair":set(()), "stool":set(())}
 
-    def locate_objects(self):
+    def locate_objects(self, memory):
         """REMINDER: Add get_memory function to memory.py"""
-        self.short_episodic = self.memory["short"].get_memory() + self.memory["episodic"].get_memory()
+        self.short_episodic = memory["short"].get_memory() + memory["episodic"].get_memory()
         self.short_episodic.sort(key=lambda x: x["timestamp"])
-        self.semantic = self.memory["semantic"].get_memory()
-        self.semantic.sort(key=lambda x: x["num_generalized"], reverse = True)
+        self.semantic = memory["semantic"].get_memory()
 
+        self.semantic.sort(key=lambda x: x["num_generalized"], reverse = True)
+        
         print("start print memory+++++++++++")
         print("short-episodic:")
-        print(self.short_episodic)
+        print(self.short_episodic[:2])
         print("semantic:")
-        print(self.semantic)
+        print(self.semantic[:2])
         print("end print memory+++++++++++++")
-
+        
         # Locate each object through short + episodic
         # assume key for each memory slot: first_human, first_object, relation, second_human, second_object, timestamp
         for info in self.short_episodic:
@@ -224,15 +224,11 @@ class Answer:
             print("{human:", item.human, ", name:", item.name, ", small_loc:", item.small_loc, ", big_loc:", item.big_loc, "}")
 
 
-    def get_ans(self, question):
+    def get_ans(self, question, memory):
         """Assume the input as (human, object, at/nextto, human, object) and is valid"""
         """Here we do not consider nextto relation between different level"""
         """Not sure answer possible?"""
-        self.locate_objects()
-        print("start++++++++++++++++++++")
-        print(question)
-        print(self.print_obj_state())
-        print("end++++++++++++++++")
+        self.locate_objects(memory)
         if question[1] in objects:
             if question[2] == "AtLocation":
                 # question object at small/big location

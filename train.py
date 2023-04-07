@@ -221,9 +221,7 @@ class RLAgent:
             self.debug_dump.append(to_dump)
         
         # Include the question to have output a filter and answer
-        print("Current state: ", self.state)
         answer = net(self.state)
-        print("Answer: ", answer)
 
         actions["memory_management_action"] = action 
         # actions["filter_action"] = memory_filter if self.pass_in_filter else None 

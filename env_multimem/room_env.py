@@ -154,7 +154,7 @@ class RoomEnv1(gym.Env):
         assert 0 < self.question_prob <= 1
 
         self.init_memory_systems()
-        self.answer_generator = Answer(self.memory_systems)
+        self.answer_generator = Answer()
 
     # NOTE: This is unchanged
     def init_memory_systems(self) -> None:
@@ -163,6 +163,12 @@ class RoomEnv1(gym.Env):
             "episodic": EpisodicMemory(capacity=self.capacity["episodic"]),
             "semantic": SemanticMemory(capacity=self.capacity["semantic"]),
             "short": ShortMemory(capacity=self.capacity["short"]),
+        }
+
+        self.ground_truth_memory_systems = {
+            "episodic": EpisodicMemory(capacity=1000000), 
+            "semantic": SemanticMemory(capacity=10),
+            "short": ShortMemory(capacity=1)
         }
 
         if self.pretrain_semantic:
@@ -389,159 +395,13 @@ class RoomEnv1(gym.Env):
             increment_des=False
         )
 
-        if self.policies["encoding"].lower() == "rl":
-            return deepcopy(self.obs), info
+        encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
+        encode_observation(self.ground_truth_memory_systems, "argmax", self.obs)
 
-        if self.policies["memory_management"].lower() == "rl":
-            encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
-            return deepcopy(self.extract_memory_entires(self.memory_systems)), info
-
-        if self.policies["question_answer"].lower() == "rl":
-            encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
-            manage_memory(self.memory_systems, self.policies["memory_management"])
-            while True:
-                if (self.question is None) and (self.answer is None):
-                    (
-                        self.obs,
-                        self.question,
-                        self.answer,
-                        self.is_last,
-                    ) = self.generate_oqa(increment_des=True)
-                    encode_observation(
-                        self.memory_systems, self.policies["encoding"], self.obs
-                    )
-                    manage_memory(
-                        self.memory_systems, self.policies["memory_management"]
-                    )
-                else:
-                    return {
-                        "memory_systems": deepcopy(
-                            self.extract_memory_entires(self.memory_systems)
-                        ),
-                        "question": deepcopy(self.question),
-                    }, info
-
-        raise ValueError
-    """
-    def step(self, action: int) -> Tuple[Tuple, int, bool, bool, dict]:
-        An agent takes an action.
-
-        Args
-        ----
-        action: This depends on the state
-
-        Returns
-        -------
-        state, reward, done, truncated, info
-
+        state = deepcopy(self.extract_memory_entires(self.memory_systems))
         
-        info = {}
-        truncated = False
-        if self.policies["encoding"].lower() == "rl":
-            # This is a dummy code
-            self.obs = self.obs[action]
-            encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
-            manage_memory(self.memory_systems, self.policies["memory_management"])
+        return state, info
 
-            if (self.question is None) and (self.answer is None):
-                reward = 0
-            else:
-                pred = answer_question(
-                    self.memory_systems, self.policies["question_answer"], self.question
-                )
-                if str(pred).lower() == self.answer:
-                    reward = self.CORRECT
-                else:
-                    reward = self.WRONG
-            self.obs, self.question, self.answer, self.is_last = self.generate_oqa(
-                increment_des=True
-            )
-            state = deepcopy(self.obs)
-
-            if self.is_last:
-                done = True
-            else:
-                done = False
-
-            return state, reward, done, truncated, info
-
-        if self.policies["memory_management"].lower() == "rl":
-            if action == 0:
-                manage_memory(self.memory_systems, "episodic")
-            elif action == 1:
-                manage_memory(self.memory_systems, "semantic")
-            elif action == 2:
-                manage_memory(self.memory_systems, "forget")
-            else:
-                raise ValueError
-
-            if (self.question is None) and (self.answer is None):
-                reward = 0
-            else:
-                pred = answer_question(
-                    self.memory_systems, self.policies["question_answer"], self.question
-                )
-                if str(pred).lower() == self.answer:
-                    reward = self.CORRECT
-                else:
-                    reward = self.WRONG
-
-            self.obs, self.question, self.answer, self.is_last = self.generate_oqa(
-                increment_des=True
-            )
-            encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
-            state = deepcopy(self.extract_memory_entires(self.memory_systems))
-
-            if self.is_last:
-                done = True
-            else:
-                done = False
-
-            return state, reward, done, truncated, info
-
-        if self.policies["question_answer"].lower() == "rl":
-            # TODO: Modify answer_question method to take in filter bit map if available 
-            if action == 0:
-                pred = answer_question(self.memory_systems, "episodic", self.question)
-            elif action == 1:
-                pred = answer_question(self.memory_systems, "semantic", self.question)
-            else:
-                raise ValueError
-            # TODO: Modify this to see if there was an inputted answer. If there was, then calculate reward on that instead? 
-            if str(pred).lower() == self.answer:
-                reward = self.CORRECT
-            else:
-                reward = self.WRONG
-
-            while True:
-                (
-                    self.obs,
-                    self.question,
-                    self.answer,
-                    self.is_last,
-                ) = self.generate_oqa(increment_des=True)
-                encode_observation(
-                    self.memory_systems, self.policies["encoding"], self.obs
-                )
-                manage_memory(self.memory_systems, self.policies["memory_management"])
-
-                if self.is_last:
-                    state = None
-                    done = True
-                    return state, reward, done, truncated, info
-                else:
-                    done = False
-
-                if (self.question is not None) and (self.answer is not None):
-                    state = {
-                        "memory_systems": deepcopy(
-                            self.extract_memory_entires(self.memory_systems)
-                        ),
-                        "question": deepcopy(self.question),
-                    }
-
-                    return state, reward, done, truncated, info
-    """
     # TODO: Change this to allow training of both the memory management AND the memory filter
     # When you take a step, you idealy want to take in the action for memory management
     # That action may have already accounted for the filtered memory 
@@ -583,6 +443,9 @@ class RoomEnv1(gym.Env):
             manage_memory(self.memory_systems, "forget")
         else:
             raise ValueError
+        
+        # Insert the memory into the episodic for ground truth 
+        manage_memory(self.ground_truth_memory_systems, "episodic")
 
         if (self.question is None) and (self.answer is None):
             reward = 0
@@ -594,27 +457,28 @@ class RoomEnv1(gym.Env):
                 # if filter_action: # If there is a filter that was provided
                 #     pred, correct_filter = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
             else:  # Then use the filter to answer the question manually
-                pred = self.answer_generator.get_ans(self.question)
+                pred = self.answer_generator.get_ans(self.question, self.memory_systems)
             
             # TODO: Use a different answer_generator for ground truth
-            correct_answer = self.answer_generator.get_ans(self.question)
-            print("Steven's correct answer: ", correct_answer)
+            print("finding correct answer")
+            correct_answer = self.answer_generator.get_ans(self.question, self.ground_truth_memory_systems)
+            print("Correct answer: ", correct_answer)
+
             if str(pred).lower() == correct_answer:
                 reward = self.CORRECT
             else:
                 reward = self.WRONG
-                
-        # correct_answer, correct_filter = answer_question(
-        #     self.memory_systems, self.policies["question_answer"], self.question, None
-        # )
 
-        
-        
 
         self.obs, self.question, self.answer, self.is_last = self.generate_oqa(
             increment_des=True
         )
         encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
+
+        # NOTE: Put the memory into the ground_truth memory system as well 
+        encode_observation(self.ground_truth_memory_systems, "argmax", self.obs)
+
+
         state = deepcopy(self.extract_memory_entires(self.memory_systems))
 
         if self.is_last:
