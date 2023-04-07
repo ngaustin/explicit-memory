@@ -364,7 +364,7 @@ class RoomEnv1(gym.Env):
             # human_q is already a quintuple
 
             question = deepcopy(human_q)
-            # TODO: Insert ground truth label here for answer to question
+            # NOTE: This is a dummy variable
             answer = 1 # deepcopy(obj_loc_q)  
         else:
             question = None
@@ -595,7 +595,11 @@ class RoomEnv1(gym.Env):
                 #     pred, correct_filter = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
             else:  # Then use the filter to answer the question manually
                 pred = self.answer_generator.get_ans(self.question)
-            if str(pred).lower() == self.answer:
+            
+            # TODO: Use a different answer_generator for ground truth
+            correct_answer = self.answer_generator.get_ans(self.question)
+            print("Steven's correct answer: ", correct_answer)
+            if str(pred).lower() == correct_answer:
                 reward = self.CORRECT
             else:
                 reward = self.WRONG
@@ -604,7 +608,8 @@ class RoomEnv1(gym.Env):
         #     self.memory_systems, self.policies["question_answer"], self.question, None
         # )
 
-        correct_answer = self.answer_generator.get_ans(self.question)
+        
+        
 
         self.obs, self.question, self.answer, self.is_last = self.generate_oqa(
             increment_des=True

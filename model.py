@@ -154,7 +154,6 @@ class LSTM(nn.Module):
     def create_batch_question(self, questions):
         batch = []
         for q in questions: 
-            print(q)
             batch.append(self.make_embedding_question(q))
         batch = torch.stack(batch)
 
