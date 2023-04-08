@@ -210,7 +210,6 @@ class RoomEnv1(gym.Env):
             possible_questions = []
 
             self.human_sequence = []
-            print("GENERATING HUMAN SEQUENCE")
 
             for i in range(len_sequence):
                 state = self.des.states[i]
@@ -488,9 +487,9 @@ class RoomEnv1(gym.Env):
         
         # Insert the memory into the episodic for ground truth 
         manage_memory(self.ground_truth_memory_systems, "episodic")
-        correct_answer = None
         if (self.question is None) and (self.answer is None):
             reward = 0
+            correct_answer = 2  # This is a dummy variable
         else:
             if answer_action: # If not None, then an answer was passed into the method. Check that it is correct
                 assert answer_action == 1 or answer_action == 0 or answer_action == 2
@@ -500,11 +499,10 @@ class RoomEnv1(gym.Env):
                 #     pred, correct_filter = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
             else:  # Then use the filter to answer the question manually
                 pred = self.answer_generator.get_ans(self.question, self.memory_systems)
+                assert pred != None
             
-            # TODO: Use a different answer_generator for ground truth
-            print("finding correct answer")
             correct_answer = self.answer_generator.get_ans(self.question, self.ground_truth_memory_systems)
-            print("Correct answer: ", correct_answer)
+            assert correct_answer != None
 
             if pred != 2 and pred == correct_answer:
                 reward = self.CORRECT

@@ -153,8 +153,9 @@ class LSTM(nn.Module):
     
     def create_batch_question(self, questions):
         batch = []
-        for q in questions: 
-            batch.append(self.make_embedding_question(q))
+        for q in questions:
+            question_tuple_from_string = ast.literal_eval(q) if type(q) == str else q
+            batch.append(self.make_embedding_question(question_tuple_from_string))
         batch = torch.stack(batch)
 
         return batch
@@ -262,7 +263,7 @@ class LSTM(nn.Module):
             the length of this is batch size 
         """
         x_ = deepcopy(x)
-        for i in range(3):
+        for i in range(len(x_)):
             if isinstance(x_[i], str):
                 # bug fix. This happens when batch_size=1. I don't even know why
                 # batch size 1 happens.
@@ -301,7 +302,11 @@ class LSTM(nn.Module):
             to_concat.append(fc_out_o)
         
         if len(x_) > 3: # Question was also passed in
-            if len(x_[3]) > 0 and x_[3][0] != None:  # Make sure not None
+            is_none = False
+            if len(x_[3]) == 1:  # singleton...no batch training but in steps 
+                # print(x_[3])
+                is_none = ast.literal_eval(x_[3][0])[0] == 1
+            if len(x_[3]) > 0 and not is_none:  # Make sure not None
                 batch_q = self.create_batch_question(x_[3])  
                 res = self.fc_q1(self.relu(self.fc_q0(batch_q)))
                 to_concat.append(res)

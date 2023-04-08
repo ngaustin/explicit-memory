@@ -6,6 +6,7 @@ import datetime
 import itertools
 import logging
 import os
+import ast
 from collections import deque, namedtuple
 from copy import deepcopy
 from multiprocessing.sharedctypes import Value
@@ -34,7 +35,7 @@ logger.disabled = True
 # Named tuple for storing experience steps gathered in training
 Experience = namedtuple(
     "Experience",
-    field_names=["state", "action", "reward", "done", "new_state", "binary_label"],
+    field_names=["state", "action", "reward", "done", "new_state", "label"],
 )
 
 
@@ -69,11 +70,11 @@ class ReplayBuffer:
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Sample data from the replay buffer."""
         indices = np.random.choice(len(self.buffer), sample_size, replace=False)
-        states, actions, rewards, dones, next_states = zip(
+        states, actions, rewards, dones, next_states, labels = zip(
             *(self.buffer[idx] for idx in indices)
         )
-
-        return states, actions, rewards, dones, next_states
+        # print(labels)
+        return states, actions, rewards, dones, next_states, labels
 
 
 class RLDataset(IterableDataset):
@@ -97,11 +98,11 @@ class RLDataset(IterableDataset):
         self.sample_size = sample_size
 
     def __iter__(self) -> Iterator[Tuple]:
-        states, actions, rewards, dones, new_states = self.replay_buffer.sample(
+        states, actions, rewards, dones, new_states, labels = self.replay_buffer.sample(
             self.sample_size
         )
         for i in range(len(dones)):
-            yield states[i], actions[i], rewards[i], dones[i], new_states[i]
+            yield states[i], actions[i], rewards[i], dones[i], new_states[i], labels[i]
 
 
 class MockDataset(Dataset):
@@ -156,10 +157,9 @@ class RLAgent:
         self.policies = policies
         self.create_spaces()
         self.debug_dump = []
-        self.question = None
+        self.question = tuple([1, 2, 3, 4, 5])
 
         # NOTE: This toggles the difficulty of our method 
-        self.pass_in_filter = False 
         self.pass_in_answer = True
 
         self.reset()
@@ -178,15 +178,16 @@ class RLAgent:
         """Reset the environment and update the state."""
         self.debug_dump = []
         self.state, info = self.env.reset()
-        self.question = None
+        self.question = tuple([1, 2, 3, 4, 5])
 
         # The lists will be converted to str temporarily ...
         self.state = [
             str(self.state["episodic"]),
             str(self.state["semantic"]),
             str(self.state["short"]),
-            []
+            str(tuple([1, 2, 3, 4, 5]))
         ]
+
 
     def get_action(
         self,
@@ -257,18 +258,20 @@ class RLAgent:
         new_state, reward, done, truncated, info = self.env.step(actions)
 
         # The lists will be converted to str temporarily ...
+        next_question = info["next_question"] if info["next_question"] != None else tuple([1, 2, 3, 4, 5])
         new_state = [
             str(new_state["episodic"]),
             str(new_state["semantic"]),
             str(new_state["short"]),
-            [info["next_question"]]
+            str(next_question)
         ]
 
-        exp = Experience(deepcopy(self.state), action, reward, done, new_state, self.question)
+        exp = Experience(deepcopy(self.state), action, reward, done, new_state, info["correct_answer"])
 
-        self.question = info["next_question"]
+        self.question = next_question
 
         self.replay_buffer.append(exp)
+
 
         self.state = new_state
         if done:
@@ -478,12 +481,14 @@ class DQNLightning(LightningModule):
             raise ValueError
 
     def classification_loss(self, batch:[Tensor, Tensor]) -> Tensor:
-        states, labels = batch 
+        states, _, _, _, _, labels = batch
 
         # Take out all of the states that have a None value for its question 
-        idx = [i for i, state in enumerate(states) if i[3] != None]
-        states = states[idx]
-        labels = labels[idx]
+        # print("Was any None: ", not all([ast.literal_eval(state) != (1, 2, 3, 4, 5) for i, state in enumerate(states[3])]))
+        idx = [i for i, state in enumerate(states[3]) if ast.literal_eval(state) != (1, 2, 3, 4, 5)]
+        # print("Filtered successfully: ", not np.all([ast.literal_eval(state) != (1, 2, 3, 4, 5) for state in states[3]]))
+        states = [tuple([s for i, s in enumerate(list(state)) if i in idx]) for state in states]
+        labels = [l for i, l in enumerate(labels) if i in idx]
 
         probs = self.net(states)
 
