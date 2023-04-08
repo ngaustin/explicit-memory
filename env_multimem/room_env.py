@@ -493,8 +493,8 @@ class RoomEnv1(gym.Env):
             reward = 0
         else:
             if answer_action: # If not None, then an answer was passed into the method. Check that it is correct
-                assert answer_action == 1 or answer_action == 0
-                pred = True if answer_action == 1 else False
+                assert answer_action == 1 or answer_action == 0 or answer_action == 2
+                pred = answer_action
             # else:  # Otherwise use the prediction by manually using the memory
                 # if filter_action: # If there is a filter that was provided
                 #     pred, correct_filter = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
@@ -506,7 +506,7 @@ class RoomEnv1(gym.Env):
             correct_answer = self.answer_generator.get_ans(self.question, self.ground_truth_memory_systems)
             print("Correct answer: ", correct_answer)
 
-            if str(pred).lower() == correct_answer:
+            if pred != 2 and pred == correct_answer:
                 reward = self.CORRECT
             else:
                 reward = self.WRONG

@@ -99,8 +99,8 @@ class LSTM(nn.Module):
             hidden_size * (len(self.memory_systems) + 1)
         )
 
-        # Final output for the question is a single binary variable that is a yes/no answer
-        self.fc_final_question1 = nn.Linear(hidden_size * (len(self.memory_systems) + 1), 1)
+        # Final output for the question is a multicass variable that is a yes/no/idk answer
+        self.fc_final_question1 = nn.Linear(hidden_size * (len(self.memory_systems) + 1), 3)
         
 
         # Continue original code
@@ -307,10 +307,10 @@ class LSTM(nn.Module):
                 to_concat.append(res)
                 fc_out_all = torch.concat(to_concat, dim=-1)
                 fc_out = self.fc_final_question1(self.relu(self.fc_final_question0(fc_out_all)))
-                fc_out = torch.nn.Sigmoid()(fc_out)
+                # fc_out = torch.nn.functional.softmax(fc_out, dim=1)
                 return fc_out 
             else:
-                return torch.tensor([[0]])
+                return torch.tensor([[0, 0, 1]])
 
         # dim=-1 is the feature dimension
         fc_out_all = torch.concat(to_concat, dim=-1)

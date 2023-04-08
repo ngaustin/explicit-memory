@@ -222,6 +222,7 @@ class RLAgent:
         
         # Include the question to have output a filter and answer
         answer = net(self.state)
+        answer = torch.argmax(answer)
 
         actions["memory_management_action"] = action 
         actions["answer_action"] = int(round(answer.item())) if self.pass_in_answer else None 
@@ -484,11 +485,12 @@ class DQNLightning(LightningModule):
         states = states[idx]
         labels = labels[idx]
 
-        pred_label = self.net(states)
+        probs = self.net(states)
 
-        answer_loss = labels * torch.log(pred_label) + (1 - labels) * torch.log(1 - pred_label)
+        loss = torch.nn.CrossEntropyLoss()
 
-        answer_loss = torch.mean(answer_loss)
+        targets = torch.LongTensor(labels)
+        answer_loss = loss(probs, targets)
 
         return answer_loss
 
