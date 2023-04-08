@@ -316,7 +316,7 @@ class Answer:
                     return 1
             elif question[2] == "NextTo":
                 #question small location next to small location
-                if self.small_to_big[question[2]] == placeholder or self.small_to_big[question[4]] == placeholder:
+                if self.small_to_big[question[1]] == placeholder or self.small_to_big[question[4]] == placeholder:
                     return 2
                 for _, small_locs in self.big_to_small.items():
                     if question[1] in small_locs and question[4] in small_locs:
