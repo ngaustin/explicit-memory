@@ -199,19 +199,43 @@ class RoomEnv1(gym.Env):
 
             # For now, just sample all combinations of object-object, object-small location, small-location relations.
             # Might need to change so that we have more equal distribution of yes/no answers
-            
+            len_sequence = self.des.until + 1
             self.question_sequence = []  # questions are in the form (first_human, first_object, relation, second_human, second_object)?
             self.des.run()
             possible_objects = set()
             possible_small_locations = set()
             possible_big_locations = set()
+            
 
             possible_questions = []
 
-            for i in range(len(self.human_sequence)):
-                # Each human represents the observation that is going to be given. Add 
-                human = self.human_sequence[i]
+            self.human_sequence = []
+            print("GENERATING HUMAN SEQUENCE")
+
+            for i in range(len_sequence):
                 state = self.des.states[i]
+                human_candidates = []
+                for h in state.keys():
+                    if state[h]["relation"] == "AtLocation":
+                        human_candidates.append(h)
+                    else:  # NextTo
+                        # Ensure that the second object has been seen 
+                        second_human = state[h]["second_human"]
+                        second_object = state[h]["second_object"]
+
+                        if second_human != "Nature":  # it's an object
+                            if (second_human, second_object) in possible_objects:
+                                human_candidates.append(h)
+                        else: # small_location
+                            if (second_human, second_object) in possible_small_locations:
+                                human_candidates.append(h)
+            
+                human = random.choice(human_candidates)
+                self.human_sequence.append(human)
+                # Each human represents the observation that is going to be given. Add 
+
+
+                human = self.human_sequence[i]
                 human_object = state[human]["first_object"]
 
                 new_entities = {"object": None, "small_location": None, "big_location": None}
@@ -464,7 +488,7 @@ class RoomEnv1(gym.Env):
         
         # Insert the memory into the episodic for ground truth 
         manage_memory(self.ground_truth_memory_systems, "episodic")
-
+        correct_answer = None
         if (self.question is None) and (self.answer is None):
             reward = 0
         else:
@@ -495,7 +519,6 @@ class RoomEnv1(gym.Env):
 
         # NOTE: Put the memory into the ground_truth memory system as well 
         encode_observation(self.ground_truth_memory_systems, "argmax", self.obs)
-        print("short", self.ground_truth_memory_systems["short"].entries)
 
 
         state = deepcopy(self.extract_memory_entires(self.memory_systems))

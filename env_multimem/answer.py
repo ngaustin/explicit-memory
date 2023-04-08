@@ -273,7 +273,7 @@ class Answer:
         # for _, item in self.all_objects.items():
         #     print("{human:", item.get_human(), ", name:", item.get_name(), ", small_loc:", item.get_small_loc(), ", big_loc:", item.get_big_loc(), "}")
         # print("finish printing state")
-        # print(question)
+
         if question[1] in objects:
             if question[2] == "AtLocation":
                 # question object at small/big location

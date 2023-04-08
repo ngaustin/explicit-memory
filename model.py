@@ -301,7 +301,7 @@ class LSTM(nn.Module):
             to_concat.append(fc_out_o)
         
         if len(x_) > 3: # Question was also passed in
-            if x_[3]:  # Make sure not None 
+            if len(x_[3]) > 0 and x_[3][0] != None:  # Make sure not None
                 batch_q = self.create_batch_question(x_[3])  
                 res = self.fc_q1(self.relu(self.fc_q0(batch_q)))
                 to_concat.append(res)
