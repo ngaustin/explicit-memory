@@ -93,6 +93,9 @@ class Answer:
                             self.all_objects[full_name].update_big_loc(info["second_object"])
                     elif info["relation"] == "NextTo" :
                         # object next to object
+                        obj2_name = info["second_human"] + info["second_object"]
+                        if obj2_name not in self.all_objects:
+                            self.all_objects[obj2_name] = Object({"human": info["second_human"],"object":info["second_object"],"small_location":placeholder, "big_location":placeholder})
                         if obj1_small_loc != placeholder:
                             self.small_to_obj[obj1_small_loc].remove(full_name)
                         obj2 = self.all_objects[info["second_human"]+info["second_object"]]
@@ -117,6 +120,9 @@ class Answer:
                             self.all_objects[full_name] = Object({"human": info["first_human"],"object":info["first_object"],"small_location":placeholder, "big_location":info["second_object"]})
                     elif info["relation"] == "NextTo" :
                         # object next to object
+                        obj2_name = info["second_human"] + info["second_object"]
+                        if obj2_name not in self.all_objects:
+                            self.all_objects[obj2_name] = Object({"human": info["second_human"],"object":info["second_object"],"small_location":placeholder, "big_location":placeholder})
                         obj2 = self.all_objects[info["second_human"]+info["second_object"]]
                         obj2_small_loc = obj2.get_small_loc()
                         obj2_big_loc = obj2.get_big_loc()
