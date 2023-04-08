@@ -164,6 +164,17 @@ class Answer:
                 # Error handle Any operation to big loc is NOT allowed  
                 pass
 
+        # build objects that only exists in semantic memory
+        for info in self.semantic:
+            if info["second_object"] in objects:
+                obj2_name = info["second_human"] + info["second_object"]
+                if obj2_name not in self.all_objects:
+                    self.all_objects[obj2_name] = Object({"human": info["second_human"],"object":info["second_object"],"small_location":placeholder, "big_location":placeholder}) 
+            if info["first_object"] in objects:
+                obj1_name = info["first_human"] + info["first_object"]
+                if obj1_name not in self.all_objects:
+                    self.all_objects[obj1_name] = Object({"human": info["first_human"],"object":info["first_object"],"small_location":placeholder, "big_location":placeholder})    
+
         # Use semantic to fill blanks
         # assume key first_human, first_object, relation, second_human, second_object, strength
         # valid to first fill in small_loc?
@@ -179,6 +190,10 @@ class Answer:
                             if info["second_object"] in small_locations:
                                 # semantic object at small location
                                 self.all_objects[obj_name].update_small_loc(info["second_object"])
+                                # new added branch
+                                possible_big_loc = self.small_to_big[info["second_object"]]
+                                if big_loc == placeholder and possible_big_loc != placeholder:
+                                    self.all_objects[obj_name].update_big_loc(possible_big_loc)    
                                 break
                             elif info["second_object"] in big_locations and big_loc == placeholder:
                                 # semantic object at big location
@@ -228,8 +243,21 @@ class Answer:
                         obj1_big_loc = obj1.get_big_loc()
                         if obj1_small_loc == small_loc:
                             self.all_objects[obj_name].update_big_loc(obj1_big_loc)
-                            break               
+                            break     
+                    elif info["first_object"] == self.all_objects[obj_name].get_small_loc():
+                        if info["relation"] == "AtLocation":
+                            if info["second_object"] in big_locations:
+                                # semantic small location at big location
+                                self.all_objects[obj_name].update_big_loc(info["second_object"])
+                                break
+                        elif info["relation"] == "NextTo":
+                            if info["second_object"] in small_locations:
+                                # semantic small location next to small location
+                                if self.small_to_big[info["second_object"]] != placeholder:
+                                    self.all_objects[obj_name].update_big_loc(self.small_to_big[info["second_object"]])
+                                    break                       
 
+        
 
     def print_obj_state(self):
         for item in self.all_objects:
@@ -250,12 +278,15 @@ class Answer:
             if question[2] == "AtLocation":
                 # question object at small/big location
                 obj = question[0] + question[1]
-                return question[4] == self.all_objects[obj].small_loc or question[4] == self.all_objects[obj].big_loc
+                # return question[4] == self.all_objects[obj].small_loc or question[4] == self.all_objects[obj].big_loc
+                # question object at big location exists?
+                return question[4] == self.all_objects[obj].small_loc
             elif question[2] == "NextTo":
                 # question object next to object
                 obj1 = question[0] + question[1]
                 obj2 = question[3] + question[4]
-                return self.all_objects[obj1].big_loc == self.all_objects[obj2].big_loc and self.all_objects[obj1].small_loc == self.all_objects[obj2].small_loc
+                # return self.all_objects[obj1].big_loc == self.all_objects[obj2].big_loc and self.all_objects[obj1].small_loc == self.all_objects[obj2].small_loc
+                return self.all_objects[obj1].small_loc == self.all_objects[obj2].small_loc
             else:
                 # Error handle
                 pass     
