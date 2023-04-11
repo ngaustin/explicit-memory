@@ -1,9 +1,16 @@
-from .memory import *
+import json
 
-people = ["Nature", "Michael", "Kai", "Cameron", "Joy", "Laura"]
-objects = ["laptop", "bottle", "pencil", "cushion", "phone"]
-small_locations = ["table", "couch", "bed", "chair", "stool"]
-big_locations = ["Study", "Garage", "Living Room", "Kitchen"]
+# from .memory import *
+
+json_file = '../data/env_multimem.json'
+f = open(json_file)
+data = json.load(f)
+
+all_info = data["component_list"]
+people = all_info["people"]
+objects = all_info["objects"]
+small_locations = all_info["small_locations"]
+big_locations = all_info["large_locations"]
 placeholder = "?"
 
 
@@ -92,9 +99,6 @@ class Answer:
                             self.all_objects[full_name].update_big_loc(info["second_object"])
                     elif info["relation"] == "NextTo" :
                         # object next to object
-                        obj2_name = info["second_human"] + info["second_object"]
-                        if obj2_name not in self.all_objects:
-                            self.all_objects[obj2_name] = Object({"human": info["second_human"],"object":info["second_object"],"small_location":placeholder, "big_location":placeholder})
                         if obj1_small_loc != placeholder:
                             self.small_to_obj[obj1_small_loc].remove(full_name)
                         obj2 = self.all_objects[info["second_human"]+info["second_object"]]
@@ -119,9 +123,6 @@ class Answer:
                             self.all_objects[full_name] = Object({"human": info["first_human"],"object":info["first_object"],"small_location":placeholder, "big_location":info["second_object"]})
                     elif info["relation"] == "NextTo" :
                         # object next to object
-                        obj2_name = info["second_human"] + info["second_object"]
-                        if obj2_name not in self.all_objects:
-                            self.all_objects[obj2_name] = Object({"human": info["second_human"],"object":info["second_object"],"small_location":placeholder, "big_location":placeholder})
                         obj2 = self.all_objects[info["second_human"]+info["second_object"]]
                         obj2_small_loc = obj2.get_small_loc()
                         obj2_big_loc = obj2.get_big_loc()
@@ -278,50 +279,33 @@ class Answer:
         # for _, item in self.all_objects.items():
         #     print("{human:", item.get_human(), ", name:", item.get_name(), ", small_loc:", item.get_small_loc(), ", big_loc:", item.get_big_loc(), "}")
         # print("finish printing state")
-
-        # return 0 if False, 1 if True, 2 if unknown
+        # print(question)
         if question[1] in objects:
             if question[2] == "AtLocation":
                 # question object at small/big location
                 obj = question[0] + question[1]
                 # return question[4] == self.all_objects[obj].small_loc or question[4] == self.all_objects[obj].big_loc
                 # question object at big location exists?
-                if self.all_objects[obj].small_loc == placeholder:
-                    return 2
-                elif question[4] != self.all_objects[obj].small_loc:
-                    return 0
-                else:
-                    return 1        
+                return question[4] == self.all_objects[obj].small_loc
             elif question[2] == "NextTo":
                 # question object next to object
                 obj1 = question[0] + question[1]
                 obj2 = question[3] + question[4]
-                if self.all_objects[obj1].small_loc == placeholder or self.all_objects[obj2].small_loc == placeholder:
-                    return 2
-                elif self.all_objects[obj1].small_loc != self.all_objects[obj2].small_loc:     
-                    return 0
-                else:
-                    return 1    
+                # return self.all_objects[obj1].big_loc == self.all_objects[obj2].big_loc and self.all_objects[obj1].small_loc == self.all_objects[obj2].small_loc
+                return self.all_objects[obj1].small_loc == self.all_objects[obj2].small_loc
             else:
                 # Error handle
                 pass     
         elif question[1] in small_locations:
             if question[2] == "AtLocation":
                 # question small location at big location
-                if self.small_to_big[question[1]] == placeholder:
-                    return 2
-                elif question[1] not in self.big_to_small[question[4]]:
-                    return 0    
-                else:
-                    return 1
+                return question[1] in self.big_to_small[question[4]]
             elif question[2] == "NextTo":
                 #question small location next to small location
-                if self.small_to_big[question[1]] == placeholder or self.small_to_big[question[4]] == placeholder:
-                    return 2
-                for _, small_locs in self.big_to_small.items():
+                for _,small_locs in self.big_to_small.items():
                     if question[1] in small_locs and question[4] in small_locs:
-                        return 1
-                return 0       
+                        return True
+                return False       
             else:
                 # Error handle
                 pass     
