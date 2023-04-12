@@ -213,7 +213,7 @@ class EpisodicMemory(Memory):
             f"memory entry {mem} added. Now there are in total of "
             f"{len(self.entries)} memories!"
         )
-        self.clean_old_memories()
+        # self.clean_old_memories()
 
         # sort ascending
         self.entries.sort(key=lambda x: x["timestamp"])

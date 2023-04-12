@@ -156,6 +156,9 @@ class RoomEnv1(gym.Env):
         self.init_memory_systems()
         self.answer_generator = Answer()
 
+        self.correct_answer_counter = {0: 0, 1:0, 2:0}
+        self.num_correct = {0: 0, 1:0, 2:0}
+
     # NOTE: This is unchanged
     def init_memory_systems(self) -> None:
         """Initialize the agent's memory systems."""
@@ -236,6 +239,7 @@ class RoomEnv1(gym.Env):
 
                 human = self.human_sequence[i]
                 human_object = state[human]["first_object"]
+                # print("human state: ", state[human]) 
 
                 new_entities = {"object": None, "small_location": None, "big_location": None}
 
@@ -272,11 +276,11 @@ class RoomEnv1(gym.Env):
                         if s != new_entities["small_location"]:
                             possible_questions.append((s[0], s[1], "AtLocation", new_entities["big_location"][0], new_entities["big_location"][1]))
 
-                
+                # print("generating sequences.... num candidate humans: {}, num candidate questions {}".format(len(human_candidates), len(possible_questions)))
                 if len(possible_questions) == 0:
-                    self.question_sequence.append(None)
+                    self.question_sequence.append([])
                 else:
-                    self.question_sequence.append(random.choice(possible_questions))
+                    self.question_sequence.append(possible_questions.copy())
 
             assert len(possible_questions) == len(set(possible_questions))
 
@@ -316,22 +320,23 @@ class RoomEnv1(gym.Env):
 
             self.des._initialize()
 
-        effective_question_sequence = []
-        for i, question in enumerate(self.question_sequence[:-1]):
-            if random.random() < self.question_prob and question:  # make sure the question is not None
-                effective_question_sequence.append(question)
-            else:
-                effective_question_sequence.append(None)
+        effective_question_sequence = self.question_sequence[:-1]
+        # for i, question in enumerate(self.question_sequence[:-1]):
+        #     if random.random() < self.question_prob and question:  # make sure the question is not None
+        #         effective_question_sequence.append(question)
+        #     else:
+        #         effective_question_sequence.append(None)
             
         # The last observation shouldn't have a question
-        effective_question_sequence.append(None)
+        effective_question_sequence.append([])
         self.question_sequence = effective_question_sequence
 
         assert len(self.human_sequence) == len(self.question_sequence)
 
         self.num_questions = sum(
-            [True for question in self.question_sequence if question is not None]
+            [True for question in self.question_sequence if len(question) > 0]
         )
+
         if self.varying_rewards:
             self.CORRECT = self.total_episode_rewards / self.num_questions
             self.WRONG = -self.CORRECT
@@ -379,7 +384,7 @@ class RoomEnv1(gym.Env):
 
         """
         first_human = self.human_sequence.pop(0)
-        human_q = self.question_sequence.pop(0)
+        human_q_options = self.question_sequence.pop(0)
 
         is_last_o = len(self.human_sequence) == 0
         is_last_q = len(self.question_sequence) == 0
@@ -406,14 +411,14 @@ class RoomEnv1(gym.Env):
             }
         )
 
-        if human_q is not None:
-            # human_q is already a quintuple
+        if len(human_q_options) != 0:
+            # human_q_options is a list of possible questions for this state
 
-            question = deepcopy(human_q)
+            question = deepcopy(human_q_options)
             # NOTE: This is a dummy variable
-            answer = 1 # deepcopy(obj_loc_q)  
+            answer = None # deepcopy(obj_loc_q)  
         else:
-            question = None
+            question = []
             answer = None
 
         return observation, question, answer, is_last
@@ -431,15 +436,26 @@ class RoomEnv1(gym.Env):
         self.generate_sequences()
         self.init_memory_systems()
         info = {}
-        self.obs, self.question, self.answer, self.is_last = self.generate_oqa(
+        # self.answer is a dummy question
+        self.obs, question_options, self.answer, self.is_last = self.generate_oqa(
             increment_des=False
         )
 
+        if len(question_options) == 0:
+            self.question = None
+            self.answer = None
+        else:
+            assert NotImplementedError
 
         encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
         encode_observation(self.ground_truth_memory_systems, "argmax", self.obs)
 
         state = deepcopy(self.extract_memory_entires(self.memory_systems))
+
+        print("Correct answer counter after episode: ", self.correct_answer_counter, self.num_correct)
+        
+        self.correct_answer_counter = {0: 0, 1:0, 2:0}
+        self.num_correct = {0: 0, 1:0, 2:0}
         
         return state, info
 
@@ -499,10 +515,17 @@ class RoomEnv1(gym.Env):
                 #     pred, correct_filter = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
             else:  # Then use the filter to answer the question manually
                 assert False
-                pred = self.answer_generator.get_ans(self.question, self.memory_systems)
+                # Populate the memory 
+                self.answer_generator.locate_objects(self.memory_systems)
+                pred = self.answer_generator.get_ans(self.question)  # NOTE: This does NOT work because self.question is a list of questions
                 assert pred != None
             
-            correct_answer = self.answer_generator.get_ans(self.question, self.ground_truth_memory_systems)
+            # Initialize the memory system in the answerer
+            self.answer_generator.locate_objects(self.ground_truth_memory_systems)
+            correct_answer = self.answer_generator.get_ans(self.question)
+
+            self.correct_answer_counter[correct_answer] += 1
+            self.num_correct[correct_answer] += 1 if (pred == correct_answer) else 0
             assert correct_answer != None
 
             # print(pred, correct_answer, answer_action)
@@ -511,15 +534,42 @@ class RoomEnv1(gym.Env):
             else:
                 reward = self.WRONG
 
-
-        self.obs, self.question, self.answer, self.is_last = self.generate_oqa(
+        # self.answer is a dummy variable
+        self.obs, question_options, self.answer, self.is_last = self.generate_oqa(
             increment_des=True
         )
+        
         encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
 
         # NOTE: Put the memory into the ground_truth memory system as well 
         encode_observation(self.ground_truth_memory_systems, "argmax", self.obs)
 
+        # Reinitialize the memory system in answerer after the new observation has been added
+        self.answer_generator.locate_objects(self.ground_truth_memory_systems)
+
+        random.shuffle(question_options)  # in-place shuffling
+        if len(question_options) == 0:
+            self.question = None
+        else:
+            intended_answer = random.choice(list(range(3)))
+            found_question = False
+            answers_found = []
+            for q in question_options:
+                expected_answer = self.answer_generator.get_ans(q)
+                answers_found.append(expected_answer)
+                if intended_answer == expected_answer:
+                    found_question = True
+                    self.question = q
+                    break 
+            if not found_question and len(question_options) > 0:
+                # If didn't find it, then use a question that has had the lowest number of answers: 
+                filtered = [(answer, count) for answer, count in self.correct_answer_counter.items() if answer != intended_answer]
+                intended_answer = min(filtered, key=lambda x: x[1])[0]
+                filtered_questions = [q for i, q in enumerate(question_options) if answers_found[i] == intended_answer]
+                if len(filtered_questions) > 0:
+                    self.question = random.choice(filtered_questions)
+                else:
+                    self.question = random.choice(question_options)
 
         state = deepcopy(self.extract_memory_entires(self.memory_systems))
 

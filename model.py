@@ -121,6 +121,7 @@ class LSTM(nn.Module):
             + self.entities["big_locations"]
             + self.entities["relations"]
         )
+
         self.word2idx = {word: idx for idx, word in enumerate(self.word2idx)}
         self.embeddings = nn.Embedding(
             len(self.word2idx), self.embedding_dim, device=self.device, padding_idx=0
@@ -262,7 +263,7 @@ class LSTM(nn.Module):
         x[3]: question batch
             the length of this is batch size 
         """
-        print("State: ", x)
+        # print("State: ", x)
         x_ = deepcopy(x)
         for i in range(len(x_)):
             if isinstance(x_[i], str):

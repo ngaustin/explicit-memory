@@ -68,7 +68,7 @@ class RoomDes:
                 "l",
             ]
             # TODO: Create a json file that consists of humans, objects, small locations, and big locations
-            self.config = read_json(f"../data/env_multimem.json")
+            self.config = read_json(f"../data/env_multimem_l.json")
         else:
             self.config = des_size
         self.check_resources = check_resources

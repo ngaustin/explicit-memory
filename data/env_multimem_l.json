@@ -1,9 +1,9 @@
 {
     "component_list": {
-        "people": ["Nature", "Michael", "Kai", "Cameron", "Joy", "Jake", "Cameron", "Laura", "Rachel", "Beth"],
-        "objects": ["laptop", "bottle", "pencil", "cushion", "phone", "jacket", "glasses"],
-        "small_locations": ["table", "couch", "bed", "chair", "stool", "closet", "nightstand"],
-        "large_locations": ["Study", "Garage", "Living Room", "Kitchen", "Basement"],
+        "people": ["Nature", "Michael", "Kai", "Cameron", "Joy", "Jake", "Laura", "Rachel", "Beth", "James", "Richard", "Anna", "Justin", "Steven", "Austin", "Stewart", "Lynn", "Sally", "Sean"],
+        "objects": ["laptop", "bottle", "pencil", "cushion", "phone", "jacket", "glasses", "shoes", "keyboard", "monitor", "vacuum", "duster", "lamp", "gloves", "shirt", "book", "leftovers"],
+        "small_locations": ["table", "couch", "bed", "chair", "stool", "closet", "nightstand", "desk", "cabinets", "bin", "shelf", "fridge"],
+        "large_locations": ["Study", "Garage", "Living Room", "Kitchen", "Basement", "Lounge", "Bedroom", "Laundry Room"],
         "relations": ["AtLocation", "NextTo"]
     },
     "components": {
@@ -24,7 +24,7 @@
                 "bed",
                 "AtLocation",
                 "Nature",
-                "Garage"
+                "Bedroom"
             ], 
             [
                 "chair",
@@ -33,11 +33,41 @@
                 "table"
             ], 
             [
+                "nightstand",
+                "NextTo",
+                "Nature",
+                "bed"
+            ],
+            [
                 "stool",
                 "NextTo",
                 "Nature",
                 "bed"
             ],
+            [
+                "fridge",
+                "AtLocation",
+                "Nature",
+                "Kitchen"
+            ],
+            [
+                "bin",
+                "AtLocation",
+                "Nature",
+                "Laundry Room"
+            ],
+            [
+                "shelf",
+                "AtLocation",
+                "Nature",
+                "Living Room"
+            ],
+            [
+                "chair",
+                "NextTo",
+                "Nature",
+                "couch"
+            ], 
             [
                 "closet",
                 "AtLocation",
@@ -45,10 +75,64 @@
                 "Living Room"
             ], 
             [
-                "chair",
+                "cabinets",
                 "AtLocation",
+                "Nature",
+                "Garage"
+            ],
+            [
+                "cabinets",
+                "AtLocation",
+                "Nature",
+                "Garage"
+            ],
+            [
+                "bin",
+                "AtLocation",
+                "Nature",
+                "Laundry Room"
+            ],
+            [
+                "cabinets",
+                "AtLocation",
+                "Nature",
+                "Garage"
+            ],
+            [
+                "chair",
                 "NextTo",
+                "Nature",
                 "stool"
+            ], 
+            [
+                "chair",
+                "NextTo",
+                "Nature",
+                "couch"
+            ], 
+            [
+                "chair",
+                "NextTo",
+                "Nature",
+                "couch"
+            ], 
+            [
+                "stool",
+                "NextTo",
+                "Nature",
+                "bed"
+            ], 
+            [
+                "desk",
+                "AtLocation",
+                "Nature",
+                "Study"
+            ], 
+            [
+                "desk",
+                "AtLocation",
+                "Nature",
+                "Study"
             ]
         ],
         "Michael": [
@@ -71,6 +155,18 @@
                 "table"
             ], 
             [
+                "bottle",
+                "NextTo",
+                "Laura",
+                "laptop"
+            ], 
+            [
+                "bottle",
+                "NextTo",
+                "Laura",
+                "laptop"
+            ], 
+            [
                 "laptop",
                 "AtLocation",
                 "Nature",
@@ -87,6 +183,42 @@
                 "NextTo",
                 "Beth",
                 "phone"
+            ],
+            [
+                "jacket",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ], 
+            [
+                "jacket",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ], 
+            [
+                "glasses",
+                "NextTo",
+                "Beth",
+                "phone"
+            ],
+            [
+                "glasses",
+                "NextTo",
+                "Beth",
+                "phone"
+            ], 
+            [
+                "shirt",
+                "AtLocation",
+                "Nature",
+                "bin"
+            ],
+            [
+                "shirt",
+                "AtLocation",
+                "Nature",
+                "bin"
             ]
         ],
         "Laura": [
@@ -175,6 +307,36 @@
                 "NextTo",
                 "Kai",
                 "phone"
+            ], 
+            [
+                "shoes",
+                "NextTo",
+                "Beth",
+                "shoes"
+            ], 
+            [
+                "shoes",
+                "NextTo",
+                "Beth",
+                "shoes"
+            ],
+            [
+                "shoes",
+                "NextTo",
+                "Beth",
+                "shoes"
+            ], 
+            [
+                "shoes",
+                "NextTo",
+                "Beth",
+                "shoes"
+            ], 
+            [
+                "jacket",
+                "AtLocation",
+                "Nature",
+                "bed"
             ]
         ],
         "Cameron": [
@@ -206,19 +368,25 @@
                 "pencil",
                 "AtLocation",
                 "Nature",
-                "Study"
+                "desk"
             ],
             [
                 "pencil",
                 "AtLocation",
                 "Nature",
-                "Study"
+                "desk"
             ],
             [
                 "glasses",
                 "NextTo",
                 "Kai",
                 "glasses"
+            ], 
+            [
+                "gloves",
+                "AtLocation",
+                "Nature",
+                "bin"
             ]
         ],
         "Joy": [
@@ -268,13 +436,13 @@
                 "pencil",
                 "AtLocation",
                 "Nature",
-                "Study"
+                "desk"
             ], 
             [
                 "pencil",
                 "AtLocation",
                 "Nature",
-                "Study"
+                "table"
             ]
         ], 
         "Rachel":[
@@ -318,7 +486,7 @@
                 "jacket",
                 "AtLocation",
                 "Nature",
-                "Chair"
+                "chair"
             ], 
             [
                 "pencil",
@@ -330,7 +498,7 @@
                 "jacket",
                 "AtLocation",
                 "Nature",
-                "Chair"
+                "chair"
             ], 
             [
                 "phone",
@@ -419,6 +587,531 @@
                 "AtLocation",
                 "Nature",
                 "couch"
+            ], 
+            [
+                "shoes",
+                "NextTo",
+                "James",
+                "shoes"
+            ], 
+            [
+                "shoes",
+                "NextTo",
+                "James",
+                "shoes"
+            ], 
+            [
+                "shoes",
+                "NextTo",
+                "James",
+                "shoes"
+            ]
+        ],
+        "James":
+        [
+            [
+                "phone",
+                "NextTo",
+                "Cameron",
+                "Laptop"
+            ],
+            [
+                "laptop",
+                "NextTo",
+                "James",
+                "phone"
+            ], 
+            [
+                "laptop",
+                "NextTo",
+                "James",
+                "phone"
+            ], 
+            [
+                "laptop",
+                "NextTo",
+                "James",
+                "phone"
+            ], 
+            [
+                "shoes",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ], 
+            [
+                "jacket",
+                "NextTo",
+                "Kai",
+                "jacket"
+            ], 
+            [
+                "keyboard",
+                "NextTo",
+                "James",
+                "monitor"
+            ], 
+            [
+                "keyboard",
+                "NextTo",
+                "James",
+                "monitor"
+            ], 
+            [
+                "keyboard",
+                "NextTo",
+                "James",
+                "monitor"
+            ], 
+            [
+                "monitor",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ], 
+            [
+                "monitor",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ], 
+            [
+                "monitor",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ]
+        ],
+        "Richard":
+        [
+            [
+                "monitor",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ], 
+            [
+                "monitor",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ], 
+            [
+                "monitor",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ], 
+            [
+                "monitor",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ],
+            [
+                "keyboard",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ],             
+            [
+                "keyboard",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ], 
+            [
+                "keyboard",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ],
+            [
+                "glasses",
+                "NextTo",
+                "Richard",
+                "monitor"
+            ],
+            [
+                "glasses",
+                "NextTo",
+                "Richard",
+                "monitor"
+            ], 
+            [
+                "keyboard",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ], 
+            [
+                "leftovers",
+                "AtLocation",
+                "Nature",
+                "table"  
+            ],
+            [
+                "leftovers",
+                "AtLocation",
+                "Nature",
+                "table"  
+            ],
+            [
+                "jacket",
+                "NextTo",
+                "Michael",
+                "shirt"
+            ]
+        ],
+        "Anna":
+        [
+            [
+                "vacuum",
+                "AtLocation",
+                "Nature",
+                "cabinets"
+            ],
+            [
+                "vacuum",
+                "AtLocation",
+                "Nature",
+                "cabinets"
+            ],
+            [
+                "vacuum",
+                "AtLocation",
+                "Nature",
+                "cabinets"
+            ],
+            [
+                "vacuum",
+                "AtLocation",
+                "Nature",
+                "cabinets"
+            ],
+            [
+                "duster",
+                "NextTo",
+                "Anna",
+                "duster"
+            ],
+            [
+                "duster",
+                "NextTo",
+                "Anna",
+                "duster"
+            ],
+            [
+                "duster",
+                "NextTo",
+                "Anna",
+                "duster"
+            ],
+            [
+                "shoes",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ], 
+            [
+                "shoes",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ], 
+            [
+                "shoes",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ]
+        ],
+        "Justin":
+        [
+            [
+                "lamp",
+                "AtLocation",
+                "Nature",
+                "nightstand"
+            ], 
+            [
+                "lamp",
+                "AtLocation",
+                "Nature",
+                "nightstand"
+            ], 
+            [
+                "lamp",
+                "AtLocation",
+                "Nature",
+                "nightstand"
+            ], 
+            [
+                "laptop",
+                "AtLocation",
+                "Nature",
+                "bed"
+            ], 
+            [
+                "monitor",
+                "AtLocation",
+                "Nature",
+                "desk"
+            ], 
+            [
+                "keyboard",
+                "NextTo",
+                "Nature",
+                "monitor"
+            ],
+            [
+                "lamp",
+                "AtLocation",
+                "Nature",
+                "nightstand"
+            ], 
+            [
+                "leftovers",
+                "NextTo",
+                "Richard",
+                "leftovers"
+            ]
+        ], 
+        "Steven": [
+            [
+                "shoes",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ],
+            [
+                "shoes",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ],
+            [
+                "shoes",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ],
+            [
+                "gloves",
+                "NextTo",
+                "Rachel",
+                "jacket"
+            ],
+            [
+                "gloves",
+                "NextTo",
+                "Rachel",
+                "jacket"
+            ],
+            [
+                "laptop",
+                "AtLocation",
+                "Nature",
+                "table"
+            ],
+            [
+                "laptop",
+                "AtLocation",
+                "Nature",
+                "table"
+            ],
+            [
+                "glasses",
+                "NextTo",
+                "Steven",
+                "laptop"
+            ],
+            [
+                "glasses",
+                "NextTo",
+                "Steven",
+                "laptop"
+            ]
+        ],
+        "Austin": [
+            [
+                "jacket",
+                "AtLocation",
+                "Nature",
+                "bin"
+            ],
+            [
+                "jacket",
+                "AtLocation",
+                "Nature",
+                "bin"
+            ],
+            [
+                "shirt",
+                "NextTo",
+                "Austin",
+                "jacket"
+            ],
+            [
+                "shirt",
+                "NextTo",
+                "Austin",
+                "jacket"
+            ],
+            [
+                "gloves",
+                "AtLocation",
+                "Nature",
+                "closet"
+            ], 
+            [
+                "shoes",
+                "NextTo",
+                "Kai",
+                "shoes"
+            ],
+            [
+                "shoes",
+                "NextTo",
+                "Kai",
+                "shoes"
+            ],
+            [
+                "shoes",
+                "NextTo",
+                "Kai",
+                "shoes"
+            ], 
+            [
+                "leftovers",
+                "NextTo",
+                "Sean",
+                "leftovers"
+            ]
+        ], 
+        "Stewart": [
+            [
+                "book",
+                "AtLocation",
+                "Nature",
+                "shelf"
+            ],
+            [
+                "book",
+                "AtLocation",
+                "Nature",
+                "shelf"
+            ],
+            [
+                "book",
+                "AtLocation",
+                "Nature",
+                "shelf"
+            ],
+            [
+                "glasses",
+                "NextTo",
+                "Stewart",
+                "book"
+            ],
+            [
+                "glasses",
+                "NextTo",
+                "Stewart",
+                "book"
+            ]
+        ], 
+        "Lynn":
+        [
+            [
+                "bottle",
+                "NextTo",
+                "Jake",
+                "bottle"
+            ],
+            [
+                "bottle",
+                "NextTo",
+                "Jake",
+                "bottle"
+            ],
+            [
+                "bottle",
+                "NextTo",
+                "Jake",
+                "bottle"
+            ],
+            [
+                "vacuum",
+                "NextTo",
+                "Anna",
+                "vacuum"
+            ],
+            [
+                "vacuum",
+                "NextTo",
+                "Anna",
+                "vacuum"
+            ],
+            [
+                "phone",
+                "NextTo",
+                "Beth",
+                "phone"
+            ]
+        ], 
+        "Sally":
+        [
+            [
+                "leftovers",
+                "AtLocation",
+                "Nature",
+                "fridge"
+            ],
+            [
+                "leftovers",
+                "AtLocation",
+                "Nature",
+                "fridge"
+            ],
+            [
+                "pencil",
+                "NextTo",
+                "Laura",
+                "laptop"
+            ]
+        ], 
+        "Sean":
+        [
+            [
+                "leftovers",
+                "NextTo",
+                "Sally",
+                "leftovers"
+            ],
+            [
+                "leftovers",
+                "NextTo",
+                "Sally",
+                "leftovers"
+            ],
+            [
+                "leftovers",
+                "NextTo",
+                "Sally",
+                "leftovers"
+            ],
+            [
+                "cushion",
+                "AtLocation",
+                "Nature",
+                "bed"
+            ], 
+            [
+                "cushion",
+                "AtLocation",
+                "Nature",
+                "bed"
             ]
         ]
     },

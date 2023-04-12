@@ -1,10 +1,23 @@
 import json
+import os
+
+def read_json(fname: str) -> dict:
+    """Read json.
+
+    There is some path magic going on here. This is to account for both the production
+    and development mode. Don't use this function for a general purpose.
+
+    """
+    fullpath = os.path.join(os.path.dirname(__file__), fname)
+
+    with open(fullpath, "r") as stream:
+        return json.load(stream)
 
 # from .memory import *
 
-json_file = '../data/env_multimem.json'
-f = open(json_file)
-data = json.load(f)
+json_file = '../data/env_multimem_l.json'
+# f = open(json_file)
+data = read_json(json_file)# json.load(f)
 
 all_info = data["component_list"]
 people = all_info["people"]
