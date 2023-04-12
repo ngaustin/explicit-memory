@@ -64,6 +64,7 @@ class Answer:
 
     def locate_objects(self, memory):
         """REMINDER: Add get_memory function to memory.py"""
+        self.clear_memory()
         self.short_episodic = memory["short"].get_memory() + memory["episodic"].get_memory()
         self.short_episodic.sort(key=lambda x: x["timestamp"])
         self.semantic = memory["semantic"].get_memory()
@@ -286,12 +287,10 @@ class Answer:
             print("{human:", item.human, ", name:", item.name, ", small_loc:", item.small_loc, ", big_loc:", item.big_loc, "}")
 
 
-    def get_ans(self, question, memory):
+    def get_ans(self, question):
         """Assume the input as (human, object, at/nextto, human, object) and is valid"""
         """Here we do not consider nextto relation between different level"""
         """Not sure answer possible?"""
-        self.clear_memory()
-        self.locate_objects(memory)
         # print("printing objects")
         # for _, item in self.all_objects.items():
         #     print("{human:", item.get_human(), ", name:", item.get_name(), ", small_loc:", item.get_small_loc(), ", big_loc:", item.get_big_loc(), "}")
