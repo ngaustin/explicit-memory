@@ -269,7 +269,17 @@ class Answer:
                                     self.all_objects[obj_name].update_big_loc(self.small_to_big[info["second_object"]])
                                     break                       
 
-        
+    def clear_memory(self):
+        self.all_objects = {}
+        self.big_to_small = {}
+        for big_loc in big_locations:
+            self.big_to_small[big_loc] = set(())
+
+        self.small_to_big = {}
+        self.small_to_obj = {}
+        for small_loc in small_locations:
+            self.small_to_big[small_loc] = placeholder
+            self.small_to_obj[small_loc] = set(())
 
     def print_obj_state(self):
         for item in self.all_objects:
@@ -280,6 +290,7 @@ class Answer:
         """Assume the input as (human, object, at/nextto, human, object) and is valid"""
         """Here we do not consider nextto relation between different level"""
         """Not sure answer possible?"""
+        self.clear_memory()
         self.locate_objects(memory)
         # print("printing objects")
         # for _, item in self.all_objects.items():
