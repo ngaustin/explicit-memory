@@ -52,9 +52,15 @@ class Object:
 class Answer:
     def __init__(self) -> None:
         self.all_objects = {}
-        self.big_to_small = {"Study":set(()), "Garage":set(()), "Living Room":set(()), "Kitchen":set(())}
-        self.small_to_big = {"table":placeholder, "couch":placeholder, "bed":placeholder, "chair":placeholder, "stool":placeholder}
-        self.small_to_obj = {"table":set(()), "couch":set(()), "bed":set(()), "chair":set(()), "stool":set(())}
+        self.big_to_small = {}
+        for big_loc in big_locations:
+            self.big_to_small[big_loc] = set(())
+
+        self.small_to_big = {}
+        self.small_to_obj = {}
+        for small_loc in small_locations:
+            self.small_to_big[small_loc] = placeholder
+            self.small_to_obj[small_loc] = set(())
 
     def locate_objects(self, memory):
         """REMINDER: Add get_memory function to memory.py"""
