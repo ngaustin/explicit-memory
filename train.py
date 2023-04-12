@@ -497,6 +497,7 @@ class DQNLightning(LightningModule):
         targets = torch.LongTensor(labels)
         answer_loss = loss(probs, targets)
 
+        # print("classificaiton loss: ", answer_loss)
         return answer_loss
 
     def get_epsilon(self, start: int, end: int, eps_last_step: int) -> float:

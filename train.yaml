@@ -4,11 +4,11 @@ pretrain_semantic: false
 varying_rewards: false
 seed: 0
 num_eval_iter: 10
-max_epochs: 16
-batch_size: 1024
-epoch_length: 131072
-replay_size: 131072
-warm_start_size: 131072
+max_epochs: 2
+batch_size: 64
+epoch_length: 8192
+replay_size: 8192
+warm_start_size: 8192
 eps_end: 0
 eps_last_step: 2048
 eps_start: 1.0

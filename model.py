@@ -262,6 +262,7 @@ class LSTM(nn.Module):
         x[3]: question batch
             the length of this is batch size 
         """
+        print("State: ", x)
         x_ = deepcopy(x)
         for i in range(len(x_)):
             if isinstance(x_[i], str):
