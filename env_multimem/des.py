@@ -3,6 +3,7 @@ import json
 import os
 from copy import deepcopy
 from pprint import pprint
+import random 
 
 
 def read_json(fname: str) -> dict:
@@ -159,15 +160,15 @@ class RoomDes:
             self.state[human]["current_time"] = self.current_time
 
 
-            # TODO: Stochastically sample for new locations here but insert additional constraints
-            # For example, a small location can only change big locations IF there are no objects on AtLocation to it 
+            # TODO: Stochastically sample here from the list of indices? 
+            chosen_idx = random.choice(list(range(len(self.components[human]))))
 
             (
                 self.state[human]["first_object"],
                 self.state[human]["relation"],
                 self.state[human]["second_human"],
                 self.state[human]["second_object"]
-            ) = self.components[human][object_location_idx]
+            ) = self.components[human][chosen_idx]
 
         current_state = deepcopy(self.state)
         # current_resources = deepcopy(self.resources)
@@ -176,6 +177,9 @@ class RoomDes:
         )
         self.events.append(deepcopy(self.event))
         self.states.append(deepcopy(self.state))
+    
+    def get_step(self, i, human):
+        return self.states[i][human]
 
     def check_event(
         self,

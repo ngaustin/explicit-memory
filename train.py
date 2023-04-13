@@ -210,7 +210,7 @@ class RLAgent:
         if np.random.random() < epsilon:
             action = self.action_space.sample()
         else:
-            q_values = net(self.state[:3])
+            q_values, _ = net(self.state[:3])
             _, action = torch.max(q_values, dim=1)
             action = int(action.item())
 
@@ -222,11 +222,16 @@ class RLAgent:
             self.debug_dump.append(to_dump)
         
         # Include the question to have output a filter and answer
-        answer = net(self.state)
+
+        # TODO: Allow to take out the filter as well
+        answer, _ = net(self.state)
+        # print("answer output: ", answer)
         answer = torch.argmax(answer)
 
         actions["memory_management_action"] = action 
         actions["answer_action"] = int(round(answer.item())) if self.pass_in_answer else None 
+        # print("chosen action: ", actions["answer_action"])
+        # print("answer_action in train.py: ", actions["answer_action"])
 
         return actions
 
@@ -315,6 +320,7 @@ class DQNLightning(LightningModule):
         num_eval_iter: int = 5,
         varying_rewards: bool = False,
         accelerator: str = "cpu",
+        use_filter: bool = False,
         **kwargs,
     ) -> None:
         """
@@ -378,7 +384,6 @@ class DQNLightning(LightningModule):
                 varying_rewards=self.hparams.varying_rewards,
         )
 
-        # TODO: Create a different buffer for filter training as well
         self.replay_buffer = ReplayBuffer(self.hparams.replay_size)
         self.classification_buffer = ReplayBuffer(self.hparams.replay_size)
 
@@ -407,6 +412,10 @@ class DQNLightning(LightningModule):
         }
         self.hparams.nn_params["capacity"] = self.hparams.capacity
         self.hparams.nn_params["accelerator"] = self.hparams["accelerator"]
+        self.hparams.nn_params["use_filter"] = self.hparams["use_filter"]
+
+        self.use_filter = self.hparams["use_filter"]
+        self.filter_reg = self.hparams["filter_regularization"]
 
         self.net = DQN(**self.hparams.nn_params)
         self.target_net = DQN(**self.hparams.nn_params)
@@ -445,7 +454,7 @@ class DQNLightning(LightningModule):
         q values
 
         """
-        output = self.net(x)
+        output, _ = self.net(x)
         return output
 
     def td_loss(self, batch: Tuple[Tensor, Tensor]) -> Tensor:
@@ -463,11 +472,11 @@ class DQNLightning(LightningModule):
         """
         states, actions, rewards, dones, next_states, _ = batch
         state_action_values = (
-            self.net(states[:3]).gather(1, actions.long().unsqueeze(-1)).squeeze(-1)
+            self.net(states[:3])[0].gather(1, actions.long().unsqueeze(-1)).squeeze(-1)
         )
 
         with torch.no_grad():
-            next_state_values = self.target_net(next_states[:3]).max(1)[0]
+            next_state_values = self.target_net(next_states[:3])[0].max(1)[0]
             next_state_values[dones] = 0.0
             next_state_values = next_state_values.detach()
 
@@ -490,12 +499,19 @@ class DQNLightning(LightningModule):
         states = [tuple([s for i, s in enumerate(list(state)) if i in idx]) for state in states]
         labels = [l for i, l in enumerate(labels) if i in idx]
 
-        probs = self.net(states)
+        # TODO: Take out the filter here 
+        probs, memory_filter = self.net(states)
 
         loss = torch.nn.CrossEntropyLoss()
 
         targets = torch.LongTensor(labels)
+        # print(probs.size(), targets.size())
         answer_loss = loss(probs, targets)
+
+        #TODO: Insert L1 regularization on the filter output as well
+        if self.use_filter:
+            regularization_loss = self.filter_reg * torch.mean(torch.sum(torch.abs(memory_filter), dim=1))
+            answer_loss += regularization_loss
 
         # print("classificaiton loss: ", answer_loss)
         return answer_loss

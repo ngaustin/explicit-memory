@@ -235,11 +235,10 @@ class RoomEnv1(gym.Env):
                 human = random.choice(human_candidates)
                 self.human_sequence.append(human)
                 # Each human represents the observation that is going to be given. Add 
-
-
+                # print("obs num ", i, ": ", human, state[human])
+                
                 human = self.human_sequence[i]
                 human_object = state[human]["first_object"]
-                # print("human state: ", state[human]) 
 
                 new_entities = {"object": None, "small_location": None, "big_location": None}
 
@@ -279,12 +278,14 @@ class RoomEnv1(gym.Env):
                 # print("generating sequences.... num candidate humans: {}, num candidate questions {}".format(len(human_candidates), len(possible_questions)))
                 if len(possible_questions) == 0:
                     self.question_sequence.append([])
+                    # print("question: ", [])
                 else:
                     self.question_sequence.append(possible_questions.copy())
+                    # print("possible questions: ", possible_questions.copy())
 
             assert len(possible_questions) == len(set(possible_questions))
 
-            self.des._initialize()
+            # self.des._initialize()
 
         else:
             """
@@ -363,7 +364,7 @@ class RoomEnv1(gym.Env):
         return memory_systems_
 
     def generate_oqa(
-        self, increment_des: bool = False
+        self, timestep=0
     ) -> Tuple[dict, dict, dict, bool]:
         """Generate an observation, question, and answer.
 
@@ -392,13 +393,14 @@ class RoomEnv1(gym.Env):
         assert is_last_o == is_last_q
         is_last = is_last_o
 
-        if increment_des:
-            self.des.step()
+        # if increment_des:
+        #     self.des.step()
+        state_human = self.des.get_step(timestep, first_human)
 
-        first_object = self.des.state[first_human]["first_object"]
-        relation = self.des.state[first_human]["relation"]
-        second_human = self.des.state[first_human]["second_human"]
-        second_object = self.des.state[first_human]["second_object"]
+        first_object = state_human["first_object"]
+        relation = state_human["relation"]
+        second_human = state_human["second_human"]
+        second_object = state_human["second_object"]
  
         observation = deepcopy(
             {
@@ -407,7 +409,7 @@ class RoomEnv1(gym.Env):
                 "relation": relation,
                 "second_human": second_human,
                 "second_object": second_object,
-                "current_time": self.des.current_time,
+                "current_time": timestep, # self.des.current_time,
             }
         )
 
@@ -435,10 +437,11 @@ class RoomEnv1(gym.Env):
         self.des._initialize()
         self.generate_sequences()
         self.init_memory_systems()
+        self.timestep = 0
         info = {}
         # self.answer is a dummy question
         self.obs, question_options, self.answer, self.is_last = self.generate_oqa(
-            increment_des=False
+            timestep=0
         )
 
         if len(question_options) == 0:
@@ -491,6 +494,8 @@ class RoomEnv1(gym.Env):
         memory_action = actions["memory_management_action"]
         answer_action = actions["answer_action"]
 
+        # print("answer action in room_env: ", answer_action)
+
         # memory_action will never be None. Assume that the corresponding policy is always working
         if memory_action == 0:
             manage_memory(self.memory_systems, "episodic")
@@ -519,7 +524,7 @@ class RoomEnv1(gym.Env):
                 self.answer_generator.locate_objects(self.memory_systems)
                 pred = self.answer_generator.get_ans(self.question)  # NOTE: This does NOT work because self.question is a list of questions
                 assert pred != None
-            
+
             # Initialize the memory system in the answerer
             self.answer_generator.locate_objects(self.ground_truth_memory_systems)
             correct_answer = self.answer_generator.get_ans(self.question)
@@ -528,15 +533,16 @@ class RoomEnv1(gym.Env):
             self.num_correct[correct_answer] += 1 if (pred == correct_answer) else 0
             assert correct_answer != None
 
-            # print(pred, correct_answer, answer_action)
+            # print("Prediction: ", pred, "   Manual prediction: ", manual_pred, "    Correct answer:    ", correct_answer)
             if pred != 2 and pred == correct_answer:
                 reward = self.CORRECT
             else:
                 reward = self.WRONG
 
         # self.answer is a dummy variable
+        self.timestep += 1
         self.obs, question_options, self.answer, self.is_last = self.generate_oqa(
-            increment_des=True
+            timestep=self.timestep
         )
         
         encode_observation(self.memory_systems, self.policies["encoding"], self.obs)
@@ -547,6 +553,8 @@ class RoomEnv1(gym.Env):
         # Reinitialize the memory system in answerer after the new observation has been added
         self.answer_generator.locate_objects(self.ground_truth_memory_systems)
 
+        # print("Ground truth memory for question: ")
+        # print(self.ground_truth_memory_systems)
         random.shuffle(question_options)  # in-place shuffling
         if len(question_options) == 0:
             self.question = None

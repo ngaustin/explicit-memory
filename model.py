@@ -23,6 +23,7 @@ class LSTM(nn.Module):
         memory_systems: list = ["episodic", "semantic", "short"],
         human_embedding_on_object_location: bool = False,
         accelerator: str = "cpu",
+        use_filter: bool = False,
         **kwargs,
     ) -> None:
         """Initialize the LSTM.
@@ -59,6 +60,7 @@ class LSTM(nn.Module):
         self.include_human = include_human
         self.memory_systems = [ms.lower() for ms in set(memory_systems)]
         self.human_embedding_on_object_location = human_embedding_on_object_location
+        self.use_filter = use_filter
 
         if accelerator == "gpu":
             self.device = "cuda"
@@ -76,12 +78,16 @@ class LSTM(nn.Module):
             self.fc_e0 = nn.Linear(hidden_size, hidden_size)
             self.fc_e1 = nn.Linear(hidden_size, hidden_size)
 
+            self.fc_e0_filter = nn.Linear(hidden_size, hidden_size)
+
         if "semantic" in self.memory_systems:
             self.lstm_s = nn.LSTM(
                 self.input_size_s, hidden_size, num_layers, batch_first=batch_first
             )
             self.fc_s0 = nn.Linear(hidden_size, hidden_size)
             self.fc_s1 = nn.Linear(hidden_size, hidden_size)
+
+            self.fc_s0_filter = nn.Linear(hidden_size, hidden_size)
 
         if "short" in self.memory_systems:
             self.lstm_o = nn.LSTM(
@@ -91,8 +97,13 @@ class LSTM(nn.Module):
             # self.fc_o0 = nn.Linear(self.input_size_o, hidden_size)
             self.fc_o1 = nn.Linear(hidden_size, hidden_size)
 
+            self.fc_o0_filter = nn.Linear(hidden_size, hidden_size)
+
         self.fc_q0 = nn.Linear(self.embedding_dim * 5, hidden_size)  # Times 5 because question has 5 parts (Human1, Object1, Relation, Human2, Object2)
         self.fc_q1 = nn.Linear(hidden_size, hidden_size)
+
+        self.fc_filter_all0 = nn.Linear(hidden_size * 4, max(hidden_size, sum(capacity.values())))
+        self.fc_filter_all1 = nn.Linear(max(hidden_size, sum(capacity.values())), sum(capacity.values()))
 
         self.fc_final_question0 = nn.Linear(
             hidden_size * (len(self.memory_systems) + 1),   # Hidden size for the memory systems AND the question
@@ -263,7 +274,6 @@ class LSTM(nn.Module):
         x[3]: question batch
             the length of this is batch size 
         """
-        # print("State: ", x)
         x_ = deepcopy(x)
         for i in range(len(x_)):
             if isinstance(x_[i], str):
@@ -309,15 +319,57 @@ class LSTM(nn.Module):
                 # print(x_[3])
                 is_none = ast.literal_eval(x_[3][0])[0] == 1
             if len(x_[3]) > 0 and not is_none:  # Make sure not None
+                # TODO: Create the filter here. FC batch_q, apply fc to the lstm_out_s, lstm_out_o, lstm_out_e, output filter, apply to create_batch output on the episodic, semantic, short memory, repass into the entire model
                 batch_q = self.create_batch_question(x_[3])  
                 res = self.fc_q1(self.relu(self.fc_q0(batch_q)))
+                memory_filter_out = None
+                
+                if self.use_filter:
+                    to_concat = []
+                    e_filter_out = self.fc_e0_filter(lstm_out_e[:, -1, :])
+                    s_filter_out = self.fc_s0_filter(lstm_out_s[:, -1, :])
+                    o_filter_out = self.fc_o0_filter(lstm_out_o[:, -1, :])
+
+                    memory_filter_out = torch.concat([e_filter_out, s_filter_out, o_filter_out, res], dim=1)
+                    memory_filter_out = self.fc_filter_all1(self.relu(self.fc_filter_all0(memory_filter_out)))
+
+                    memory_filter_out = torch.nn.functional.sigmoid(memory_filter_out)
+
+                    e_filter = memory_filter_out[:, :self.capacity["episodic"]].unsqueeze(2)
+                    s_filter = memory_filter_out[:, self.capacity["episodic"] : self.capacity["episodic"] + self.capacity["semantic"]].unsqueeze(2)
+                    o_filter = memory_filter_out[:, self.capacity["episodic"] + self.capacity["semantic"]: ].unsqueeze(2)
+
+                    filtered_batch_e = batch_e * e_filter 
+                    filtered_batch_s = batch_s * s_filter 
+                    filtered_batch_o = batch_o * o_filter 
+
+                    lstm_out_e, _ = self.lstm_e(filtered_batch_e)
+                    fc_out_e = self.relu(
+                        self.fc_e1(self.relu(self.fc_e0(lstm_out_e[:, -1, :])))
+                    )
+                    to_concat.append(fc_out_e)
+
+                    lstm_out_s, _ = self.lstm_s(filtered_batch_s)
+                    fc_out_s = self.relu(
+                        self.fc_s1(self.relu(self.fc_s0(lstm_out_s[:, -1, :])))
+                    )
+                    to_concat.append(fc_out_s)
+
+                    lstm_out_o, _ = self.lstm_o(filtered_batch_o)
+                    fc_out_o = self.relu(
+                        self.fc_o1(self.relu(self.fc_o0(lstm_out_o[:, -1, :])))
+                    )
+                    to_concat.append(fc_out_o)
+                
                 to_concat.append(res)
                 fc_out_all = torch.concat(to_concat, dim=-1)
                 fc_out = self.fc_final_question1(self.relu(self.fc_final_question0(fc_out_all)))
                 # fc_out = torch.nn.functional.softmax(fc_out, dim=1)
-                return fc_out 
+
+                # TODO: Return the filter as well
+                return fc_out, memory_filter_out
             else:
-                return torch.tensor([[0, 0, 1]])
+                return torch.tensor([[0, 0, 1]]), None 
 
         # dim=-1 is the feature dimension
         fc_out_all = torch.concat(to_concat, dim=-1)
@@ -325,4 +377,4 @@ class LSTM(nn.Module):
         # fc_out has the dimension of (batch_size, 2)
         fc_out = self.fc_final1(self.relu(self.fc_final0(fc_out_all)))
 
-        return fc_out
+        return fc_out, None

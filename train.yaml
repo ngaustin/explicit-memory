@@ -1,10 +1,12 @@
+use_filter: true
+filter_regularization: .01
 allow_random_human: true
 allow_random_question: true
 pretrain_semantic: false
 varying_rewards: false
 seed: 0
 num_eval_iter: 10
-max_epochs: 2
+max_epochs: 20
 batch_size: 64
 epoch_length: 8192
 replay_size: 8192
@@ -19,8 +21,8 @@ loss_function: huber
 optimizer: adam
 des_size: l
 capacity:
-  episodic: 4
-  semantic: 4
+  episodic: 16
+  semantic: 16
   short: 1
 question_prob: 1.0
 observation_params: perfect
