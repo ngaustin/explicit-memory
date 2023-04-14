@@ -511,6 +511,7 @@ class DQNLightning(LightningModule):
         #TODO: Insert L1 regularization on the filter output as well
         if self.use_filter:
             regularization_loss = self.filter_reg * torch.mean(torch.sum(torch.abs(memory_filter), dim=1))
+            print("Regularization loss: ", regularization_loss, "    Approximate num memories on average: ", regularization_loss / self.filter_reg)
             answer_loss += regularization_loss
 
         # print("classificaiton loss: ", answer_loss)
