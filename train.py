@@ -497,10 +497,11 @@ class DQNLightning(LightningModule):
         idx = [i for i, state in enumerate(states[3]) if ast.literal_eval(state) != (1, 2, 3, 4, 5)]
         # print("Filtered successfully: ", not np.all([ast.literal_eval(state) != (1, 2, 3, 4, 5) for state in states[3]]))
         states = [tuple([s for i, s in enumerate(list(state)) if i in idx]) for state in states]
+        # rewards = [r for i, r in enumerate(rewards) if i in idx]
         labels = [l for i, l in enumerate(labels) if i in idx]
 
         # TODO: Take out the filter here 
-        probs, memory_filter = self.net(states)
+        probs, memory_filter_probs = self.net(states)
 
         loss = torch.nn.CrossEntropyLoss()
 
@@ -508,11 +509,29 @@ class DQNLightning(LightningModule):
         # print(probs.size(), targets.size())
         answer_loss = loss(probs, targets)
 
-        #TODO: Insert L1 regularization on the filter output as well
         if self.use_filter:
-            regularization_loss = self.filter_reg * torch.mean(torch.sum(torch.abs(memory_filter), dim=1))
-            print("Regularization loss: ", regularization_loss, "    Approximate num memories on average: ", regularization_loss / self.filter_reg)
-            answer_loss += regularization_loss
+            # regularization_loss = self.filter_reg * torch.mean(torch.sum(torch.square(memory_filter), dim=1))
+            # print("Regularization loss: ", regularization_loss, "    Approximate num memories on average: ", regularization_loss / self.filter_reg, "    Std num memories: ", torch.std(torch.sum(torch.abs(memory_filter), dim=1)))
+            # answer_loss += regularization_loss
+            log_probs = torch.sum(torch.log(memory_filter_probs), dim=1)
+
+            # Action probs
+            preds = torch.argmax(probs, dim=1).detach()
+
+            norm_probs = torch.nn.functional.softmax(probs, dim=1)
+            norm_probs, preds = torch.max(norm_probs, dim=1)
+
+            preds = torch.where(norm_probs > .5, preds, -1)  # -1 is used because there is no prediction with value -1
+
+            # Define rewards based on the current model's prediction (not the past one)
+            rewards = torch.where(preds == targets, 1.0, -1.0)
+
+            filter_loss = -torch.mean(log_probs * rewards)  # TODO: Instead of using rewards here, use whether or not the argmax of probs is the same as label. That way, it's still on-policy
+
+            regularization_loss = torch.mean(torch.sum(1 - memory_filter_probs, dim=1))
+
+            print("Policy loss:    ", filter_loss, "    Regularization loss: ", regularization_loss)
+            filter_loss += self.filter_reg * regularization_loss 
 
         # print("classificaiton loss: ", answer_loss)
         return answer_loss

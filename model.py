@@ -102,6 +102,21 @@ class LSTM(nn.Module):
         self.fc_q0 = nn.Linear(self.embedding_dim * 5, hidden_size)  # Times 5 because question has 5 parts (Human1, Object1, Relation, Human2, Object2)
         self.fc_q1 = nn.Linear(hidden_size, hidden_size)
 
+        self.fc_filter_q0 = nn.Linear(self.embedding_dim * 5, hidden_size)
+        self.fc_filter_q1 = nn.Linear(hidden_size, hidden_size)
+
+        self.lstm_filter_e = nn.LSTM(
+                self.input_size_e, hidden_size, num_layers, batch_first=batch_first
+            )
+
+        self.lstm_filter_s = nn.LSTM(
+                self.input_size_s, hidden_size, num_layers, batch_first=batch_first
+            )
+        
+        self.lstm_filter_o = nn.LSTM(
+                self.input_size_o, hidden_size, num_layers, batch_first=batch_first
+            )
+
         self.fc_filter_all0 = nn.Linear(hidden_size * 4, max(hidden_size, sum(capacity.values())))
         self.fc_filter_all1 = nn.Linear(max(hidden_size, sum(capacity.values())), sum(capacity.values()))
 
@@ -321,23 +336,28 @@ class LSTM(nn.Module):
             if len(x_[3]) > 0 and not is_none:  # Make sure not None
                 # TODO: Create the filter here. FC batch_q, apply fc to the lstm_out_s, lstm_out_o, lstm_out_e, output filter, apply to create_batch output on the episodic, semantic, short memory, repass into the entire model
                 batch_q = self.create_batch_question(x_[3])  
-                res = self.fc_q1(self.relu(self.fc_q0(batch_q)))
                 memory_filter_out = None
-                
                 if self.use_filter:
                     to_concat = []
-                    e_filter_out = self.fc_e0_filter(lstm_out_e[:, -1, :])
-                    s_filter_out = self.fc_s0_filter(lstm_out_s[:, -1, :])
-                    o_filter_out = self.fc_o0_filter(lstm_out_o[:, -1, :])
 
-                    memory_filter_out = torch.concat([e_filter_out, s_filter_out, o_filter_out, res], dim=1)
+                    q_filter_out = self.fc_filter_q1(self.relu(self.fc_filter_q0(batch_q)))
+
+                    e_filter_out = self.fc_e0_filter(self.lstm_filter_e(batch_e)[0][:, -1, :])
+                    s_filter_out = self.fc_s0_filter(self.lstm_filter_s(batch_s)[0][:, -1, :])
+                    o_filter_out = self.fc_o0_filter(self.lstm_filter_o(batch_o)[0][:, -1, :])
+
+                    memory_filter_out = torch.concat([e_filter_out, s_filter_out, o_filter_out, q_filter_out], dim=1)
                     memory_filter_out = self.fc_filter_all1(self.relu(self.fc_filter_all0(memory_filter_out)))
 
+                    # memory_filter_out = torch.relu(torch.sign((torch.nn.functional.sigmoid(memory_filter_out) - .5)))
                     memory_filter_out = torch.nn.functional.sigmoid(memory_filter_out)
+                    
+                    m = torch.distributions.Bernoulli(memory_filter_out)
+                    memory_filter = m.sample()
 
-                    e_filter = memory_filter_out[:, :self.capacity["episodic"]].unsqueeze(2)
-                    s_filter = memory_filter_out[:, self.capacity["episodic"] : self.capacity["episodic"] + self.capacity["semantic"]].unsqueeze(2)
-                    o_filter = memory_filter_out[:, self.capacity["episodic"] + self.capacity["semantic"]: ].unsqueeze(2)
+                    e_filter = memory_filter[:, :self.capacity["episodic"]].unsqueeze(2)
+                    s_filter = memory_filter[:, self.capacity["episodic"] : self.capacity["episodic"] + self.capacity["semantic"]].unsqueeze(2)
+                    o_filter = memory_filter[:, self.capacity["episodic"] + self.capacity["semantic"]: ].unsqueeze(2)
 
                     filtered_batch_e = batch_e * e_filter 
                     filtered_batch_s = batch_s * s_filter 
@@ -361,6 +381,7 @@ class LSTM(nn.Module):
                     )
                     to_concat.append(fc_out_o)
                 
+                res = self.fc_q1(self.relu(self.fc_q0(batch_q)))
                 to_concat.append(res)
                 fc_out_all = torch.concat(to_concat, dim=-1)
                 fc_out = self.fc_final_question1(self.relu(self.fc_final_question0(fc_out_all)))
