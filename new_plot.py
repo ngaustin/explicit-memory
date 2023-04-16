@@ -96,7 +96,7 @@ for kind in kinds:
 
 
 if num == len(kinds):
-    width = 0.17
+    width = 0.25
     idx = np.asanyarray([i for i in range(len(results))])
     # fig, ax = plt.subplots(figsize=figsize)
     fig, ax = plt.subplots()
@@ -115,7 +115,7 @@ if num == len(kinds):
 
     color_order = ["orange", "dodgerblue"]
 
-    for i, w, color in zip([0,1], [-0.5, 0.5], color_order):
+    for i, w, color in zip([0,1], [-0.53, 0.53], color_order):
         height = [results_[i][0] for _, results_ in results.items()]
         yerr = [results_[i][1] for _, results_ in results.items()]
         ax.bar(
@@ -129,7 +129,7 @@ if num == len(kinds):
 
     ax.set_xticks(idx)
     ax.set_xticklabels(list(results.keys()))
-    plt.xticks(0)
+    plt.xticks()
     plt.yticks()
     ax.set_ylim([0, 128])
     ax.legend(legend_order)
