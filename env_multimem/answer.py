@@ -315,32 +315,52 @@ class Answer:
         #     print("{human:", item.get_human(), ", name:", item.get_name(), ", small_loc:", item.get_small_loc(), ", big_loc:", item.get_big_loc(), "}")
         # print("finish printing state")
         # print(question)
+
+
+        # return 0 if False, 1 if True, 2 if unknown
         if question[1] in objects:
             if question[2] == "AtLocation":
                 # question object at small/big location
                 obj = question[0] + question[1]
                 # return question[4] == self.all_objects[obj].small_loc or question[4] == self.all_objects[obj].big_loc
                 # question object at big location exists?
-                return question[4] == self.all_objects[obj].small_loc
+                if obj not in self.all_objects or self.all_objects[obj].small_loc == placeholder:
+                    return 2
+                elif question[4] != self.all_objects[obj].small_loc:
+                    return 0
+                else:
+                    return 1 
             elif question[2] == "NextTo":
                 # question object next to object
                 obj1 = question[0] + question[1]
                 obj2 = question[3] + question[4]
                 # return self.all_objects[obj1].big_loc == self.all_objects[obj2].big_loc and self.all_objects[obj1].small_loc == self.all_objects[obj2].small_loc
-                return self.all_objects[obj1].small_loc == self.all_objects[obj2].small_loc
+                if obj1 not in self.all_objects or obj2 not in self.all_objects or self.all_objects[obj1].small_loc == placeholder or self.all_objects[obj2].small_loc == placeholder:
+                    return 2
+                elif self.all_objects[obj1].small_loc != self.all_objects[obj2].small_loc:     
+                    return 0
+                else:
+                    return 1   
             else:
                 # Error handle
                 pass     
         elif question[1] in small_locations:
             if question[2] == "AtLocation":
                 # question small location at big location
-                return question[1] in self.big_to_small[question[4]]
+                if self.small_to_big[question[1]] == placeholder:
+                    return 2
+                elif question[1] not in self.big_to_small[question[4]]:
+                    return 0    
+                else:
+                    return 1
             elif question[2] == "NextTo":
                 #question small location next to small location
-                for _,small_locs in self.big_to_small.items():
+                if self.small_to_big[question[1]] == placeholder or self.small_to_big[question[4]] == placeholder:
+                    return 2
+                for _, small_locs in self.big_to_small.items():
                     if question[1] in small_locs and question[4] in small_locs:
-                        return True
-                return False       
+                        return 1
+                return 0              
             else:
                 # Error handle
                 pass     
