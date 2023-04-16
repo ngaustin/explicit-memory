@@ -1,4 +1,4 @@
-use_filter: true
+use_filter: false
 filter_regularization: 1
 allow_random_human: true
 allow_random_question: true
@@ -21,8 +21,8 @@ loss_function: huber
 optimizer: adam
 des_size: l
 capacity:
-  episodic: 16
-  semantic: 16
+  episodic: 1
+  semantic: 1
   short: 1
 question_prob: 1.0
 observation_params: perfect

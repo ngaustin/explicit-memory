@@ -160,7 +160,7 @@ class RLAgent:
         self.question = tuple([1, 2, 3, 4, 5])
 
         # NOTE: This toggles the difficulty of our method 
-        self.pass_in_answer = True
+        self.pass_in_answer = False
 
         self.reset()
 

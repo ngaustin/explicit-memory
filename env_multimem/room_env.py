@@ -537,7 +537,7 @@ class RoomEnv1(gym.Env):
                 # if filter_action: # If there is a filter that was provided
                 #     pred, correct_filter = answer_question(self.memory_systems, self.policies["question_answer"], self.question, filter_action)
             else:  # Then use the filter to answer the question manually
-                assert False
+                # assert False
                 # Populate the memory 
                 self.answer_generator.locate_objects(self.memory_systems)
                 pred = self.answer_generator.get_ans(self.question)  # NOTE: This does NOT work because self.question is a list of questions
