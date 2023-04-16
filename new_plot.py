@@ -75,6 +75,7 @@ for kind in kinds:
         xlabel = "Step"
         ylabel = "Avg. total rewards"
 
+        plt.figure()
         plt.plot(steps, means, color="pink")
         plt.fill_between(
             steps,
@@ -91,7 +92,7 @@ for kind in kinds:
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.title(title)
-        plt.savefig("./new_figures/" + kind + "_reward.png")  
+        plt.savefig("./new_figures/" + kind + "_reward.png")
 
 
 if num == len(kinds):
