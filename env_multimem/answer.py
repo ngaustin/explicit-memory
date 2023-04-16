@@ -15,7 +15,7 @@ def read_json(fname: str) -> dict:
 
 # from .memory import *
 
-json_file = '../data/env_multimem_l.json'
+json_file = '../data/env_multimem_xs.json'
 # f = open(json_file)
 data = read_json(json_file)# json.load(f)
 

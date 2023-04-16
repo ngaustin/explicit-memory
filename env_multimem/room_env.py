@@ -159,6 +159,8 @@ class RoomEnv1(gym.Env):
         self.correct_answer_counter = {0: 0, 1:0, 2:0}
         self.num_correct = {0: 0, 1:0, 2:0}
 
+        self.question_to_answer = {}  
+
     # NOTE: This is unchanged
     def init_memory_systems(self) -> None:
         """Initialize the agent's memory systems."""
@@ -444,6 +446,20 @@ class RoomEnv1(gym.Env):
             timestep=0
         )
 
+        # print(self.question_to_answer)
+        entropies = []
+        import math 
+        for q, a_count in self.question_to_answer.items():
+            total_answers = sum(a_count)
+            total = 0
+            for i in range(3):
+                if a_count[i] != 0:
+                    p = a_count[i] / total_answers
+                    total -= p * math.log(p)
+            entropies.append(total)
+        if len(entropies) > 0:
+            print("Average entropy distribution of answers: ", sum(entropies) / len(entropies))
+
         if len(question_options) == 0:
             self.question = None
             self.answer = None
@@ -497,6 +513,7 @@ class RoomEnv1(gym.Env):
         # print("answer action in room_env: ", answer_action)
 
         # memory_action will never be None. Assume that the corresponding policy is always working
+        
         if memory_action == 0:
             manage_memory(self.memory_systems, "episodic")
         elif memory_action == 1:
@@ -505,6 +522,7 @@ class RoomEnv1(gym.Env):
             manage_memory(self.memory_systems, "forget")
         else:
             raise ValueError
+        
         
         # Insert the memory into the episodic for ground truth 
         manage_memory(self.ground_truth_memory_systems, "episodic")
@@ -529,7 +547,12 @@ class RoomEnv1(gym.Env):
             self.answer_generator.locate_objects(self.ground_truth_memory_systems)
             correct_answer = self.answer_generator.get_ans(self.question)
 
+            curr_count_of_answers = self.question_to_answer.get(self.question, [0, 0, 0])
+            curr_count_of_answers[correct_answer] += 1
+            self.question_to_answer[self.question] = curr_count_of_answers
+
             self.correct_answer_counter[correct_answer] += 1
+            
             self.num_correct[correct_answer] += 1 if (pred == correct_answer) else 0
             assert correct_answer != None
 
@@ -538,6 +561,8 @@ class RoomEnv1(gym.Env):
                 reward = self.CORRECT
             else:
                 reward = self.WRONG
+            
+            # print("In Room_env   : ", answer_action, pred, correct_answer, reward)
 
         # self.answer is a dummy variable
         self.timestep += 1

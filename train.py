@@ -229,7 +229,8 @@ class RLAgent:
         answer = torch.argmax(answer)
 
         actions["memory_management_action"] = action 
-        actions["answer_action"] = int(round(answer.item())) if self.pass_in_answer else None 
+        actions["answer_action"] = int(answer.item()) if self.pass_in_answer else None 
+        # print("Answer action in train.py: ", actions["answer_action"], answer.item(), self.pass_in_answer, self.state[0])
         # print("chosen action: ", actions["answer_action"])
         # print("answer_action in train.py: ", actions["answer_action"])
 
@@ -528,10 +529,12 @@ class DQNLightning(LightningModule):
 
             filter_loss = -torch.mean(log_probs * rewards)  # TODO: Instead of using rewards here, use whether or not the argmax of probs is the same as label. That way, it's still on-policy
 
-            regularization_loss = torch.mean(torch.sum(1 - memory_filter_probs, dim=1))
+            regularization_loss = torch.mean(torch.sum(memory_filter_probs, dim=1))
 
             print("Policy loss:    ", filter_loss, "    Regularization loss: ", regularization_loss)
             filter_loss += self.filter_reg * regularization_loss 
+
+            answer_loss += filter_loss
 
         # print("classificaiton loss: ", answer_loss)
         return answer_loss

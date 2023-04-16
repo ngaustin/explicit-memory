@@ -330,6 +330,7 @@ class LSTM(nn.Module):
         
         if len(x_) > 3: # Question was also passed in
             is_none = False
+            # print("Episodic memory in model forward: ", x[0], "Semantic: ", x[1], "Short", x[2], "   Question in model forward: ", x[3])
             if len(x_[3]) == 1:  # singleton...no batch training but in steps 
                 # print(x_[3])
                 is_none = ast.literal_eval(x_[3][0])[0] == 1
@@ -354,6 +355,8 @@ class LSTM(nn.Module):
                     
                     m = torch.distributions.Bernoulli(memory_filter_out)
                     memory_filter = m.sample()
+
+                    # print("Sum of memory filter during forward: ", torch.sum(memory_filter))
 
                     e_filter = memory_filter[:, :self.capacity["episodic"]].unsqueeze(2)
                     s_filter = memory_filter[:, self.capacity["episodic"] : self.capacity["episodic"] + self.capacity["semantic"]].unsqueeze(2)
