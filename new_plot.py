@@ -117,7 +117,7 @@ if num == len(kinds):
     color_order = ["orange", "dodgerblue"]
 
     for i, w, color in zip([0,1], [-0.53, 0.53], color_order):
-        height = [results_[i][0] for _, results_ in results.items()]
+        height = [results_[i][0] + 128 for _, results_ in results.items()]
         yerr = [results_[i][1] for _, results_ in results.items()]
         ax.bar(
             x=idx + w * width,
