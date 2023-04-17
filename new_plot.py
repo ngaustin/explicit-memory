@@ -97,7 +97,8 @@ for kind in kinds:
 
 
 if num == len(kinds):
-    width = 0.25
+    # width = 0.25
+    width = 0.4
     idx = np.asanyarray([i for i in range(len(results))])
     # fig, ax = plt.subplots(figsize=figsize)
     fig, ax = plt.subplots()
@@ -116,25 +117,38 @@ if num == len(kinds):
 
     color_order = ["orange", "dodgerblue"]
 
-    for i, w, color in zip([0,1], [-0.53, 0.53], color_order):
-        height = [results_[i][0] + 128 for _, results_ in results.items()]
-        yerr = [results_[i][1] for _, results_ in results.items()]
-        ax.bar(
-            x=idx + w * width,
-            height=height,
-            yerr=yerr,
-            width=width,
-            color=color,
-            capsize=4,
-            bottom=-128
-        )
+    # for i, w, color in zip([0,1], [-0.53, 0.53], color_order):
+    #     height = [results_[i][0] + 128 for _, results_ in results.items()]
+    #     yerr = [results_[i][1] for _, results_ in results.items()]
+    #     ax.bar(
+    #         x=idx + w * width,
+    #         height=height,
+    #         yerr=yerr,
+    #         width=width,
+    #         color=color,
+    #         capsize=4,
+    #         bottom=-128
+    #     )
+
+    
+    height = [results_[0][0] + 128 for _, results_ in results.items()]
+    yerr = [results_[0][1] for _, results_ in results.items()]
+    ax.bar(
+        x=idx,
+        height=height,
+        yerr=yerr,
+        width=width,
+        color="orange",
+        capsize=4,
+        bottom=-128
+    )
 
     ax.set_xticks(idx)
     ax.set_xticklabels(list(results.keys()))
     plt.xticks()
     plt.yticks()
     ax.set_ylim([-128, 128])
-    ax.legend(legend_order)
+    # ax.legend(legend_order)
     ax.set_xlabel("Memory capacity")
     ax.set_ylabel(ylabel)
     plt.title(title)
