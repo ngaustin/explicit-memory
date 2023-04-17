@@ -89,6 +89,7 @@ for kind in kinds:
 
         plt.xticks()
         plt.yticks()
+        plt.ylim((-128, 128))
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.title(title)
@@ -125,13 +126,14 @@ if num == len(kinds):
             width=width,
             color=color,
             capsize=4,
+            bottom=-128
         )
 
     ax.set_xticks(idx)
     ax.set_xticklabels(list(results.keys()))
     plt.xticks()
     plt.yticks()
-    ax.set_ylim([0, 128])
+    ax.set_ylim([-128, 128])
     ax.legend(legend_order)
     ax.set_xlabel("Memory capacity")
     ax.set_ylabel(ylabel)

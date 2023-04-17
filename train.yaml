@@ -21,8 +21,8 @@ loss_function: huber
 optimizer: adam
 des_size: l
 capacity:
-  episodic: 1
-  semantic: 1
+  episodic: 16
+  semantic: 16
   short: 1
 question_prob: 1.0
 observation_params: perfect
