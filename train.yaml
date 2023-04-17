@@ -1,5 +1,7 @@
-use_filter: false
-filter_regularization: 1
+use_filter: true
+filter_regularization: .5
+training_offset: 1
+classification_batch: 64
 allow_random_human: true
 allow_random_question: true
 pretrain_semantic: false
@@ -21,8 +23,8 @@ loss_function: huber
 optimizer: adam
 des_size: l
 capacity:
-  episodic: 16
-  semantic: 16
+  episodic: 8
+  semantic: 8
   short: 1
 question_prob: 1.0
 observation_params: perfect

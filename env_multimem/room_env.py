@@ -8,6 +8,7 @@ import os
 import random
 from copy import deepcopy
 from typing import Tuple
+import math
 
 import gymnasium as gym
 
@@ -426,6 +427,15 @@ class RoomEnv1(gym.Env):
             answer = None
 
         return observation, question, answer, is_last
+    
+    def entropy(self, a_count):
+        total_answers = sum(a_count)
+        total = 0
+        for i in range(3):
+            if a_count[i] != 0:
+                p = a_count[i] / total_answers
+                total -= p * math.log(p)
+        return total
 
     def reset(self) -> dict:
         """Reset the environment.
@@ -448,15 +458,8 @@ class RoomEnv1(gym.Env):
 
         # print(self.question_to_answer)
         entropies = []
-        import math 
         for q, a_count in self.question_to_answer.items():
-            total_answers = sum(a_count)
-            total = 0
-            for i in range(3):
-                if a_count[i] != 0:
-                    p = a_count[i] / total_answers
-                    total -= p * math.log(p)
-            entropies.append(total)
+            entropies.append(self.entropy(a_count))
         if len(entropies) > 0:
             print("Average entropy distribution of answers: ", sum(entropies) / len(entropies))
 
@@ -540,16 +543,17 @@ class RoomEnv1(gym.Env):
                 # assert False
                 # Populate the memory 
                 self.answer_generator.locate_objects(self.memory_systems)
-                pred = self.answer_generator.get_ans(self.question)  # NOTE: This does NOT work because self.question is a list of questions
+                try: 
+                    pred = self.answer_generator.get_ans(self.question) 
+                except KeyError:
+                    pred = 2
                 assert pred != None
 
             # Initialize the memory system in the answerer
             self.answer_generator.locate_objects(self.ground_truth_memory_systems)
             correct_answer = self.answer_generator.get_ans(self.question)
 
-            curr_count_of_answers = self.question_to_answer.get(self.question, [0, 0, 0])
-            curr_count_of_answers[correct_answer] += 1
-            self.question_to_answer[self.question] = curr_count_of_answers
+            # print("Question distribution: ", self.question_to_answer.get(self.question, [0, 0, 0]))
 
             self.correct_answer_counter[correct_answer] += 1
             
@@ -587,22 +591,54 @@ class RoomEnv1(gym.Env):
             intended_answer = random.choice(list(range(3)))
             found_question = False
             answers_found = []
-            for q in question_options:
+            entropies = []
+            max_entropy = math.log(2)
+            self.question = None
+
+            # Find question that not only maximizes the answer distribution's entropy but also equalizes the distribution of correct answers for questions
+            for q in question_options: 
                 expected_answer = self.answer_generator.get_ans(q)
                 answers_found.append(expected_answer)
+                
+                curr_count_of_answers = self.question_to_answer.get(q, [0, 0, 0])
+                curr_count_of_answers[expected_answer] += 1
+                self.question_to_answer[q] = curr_count_of_answers
+
+                e = self.entropy(curr_count_of_answers)
+                entropies.append(e)
+
                 if intended_answer == expected_answer:
                     found_question = True
-                    self.question = q
-                    break 
-            if not found_question and len(question_options) > 0:
-                # If didn't find it, then use a question that has had the lowest number of answers: 
-                filtered = [(answer, count) for answer, count in self.correct_answer_counter.items() if answer != intended_answer]
-                intended_answer = min(filtered, key=lambda x: x[1])[0]
-                filtered_questions = [q for i, q in enumerate(question_options) if answers_found[i] == intended_answer]
-                if len(filtered_questions) > 0:
-                    self.question = random.choice(filtered_questions)
-                else:
-                    self.question = random.choice(question_options)
+                    p = e / max_entropy 
+                    if random.random() < p: 
+                        self.question = q 
+                        break
+            
+            if not self.question:
+                if found_question:
+                    probs = [e if answers_found[i] == intended_answer else 0 for i, e in enumerate(entropies)]
+                    if sum(probs) == 0:
+                        self.question = random.choice([q for i, q in enumerate(question_options) if answers_found[i] == intended_answer])
+                    else:
+                        selection = random.choices(list(range(len(entropies))), weights=probs, k=1)[0]
+                        self.question = question_options[selection]
+                elif len(question_options) > 0:
+                    # If didn't find it, then use a question that has had the lowest number of answers: 
+                    filtered = [(answer, count) for answer, count in self.correct_answer_counter.items() if answer != intended_answer]
+                    intended_answer = min(filtered, key=lambda x: x[1])[0]
+
+                    filtered_entropies = []
+                    for i, e in enumerate(entropies):
+                        filtered_entropies.append(e if answers_found[i] == intended_answer else 0)
+                        found_question = found_question or answers_found[i] == intended_answer
+                    if found_question:
+                        if sum(filtered_entropies) == 0:
+                            self.question = random.choice([q for i, q in enumerate(question_options) if answers_found[i] == intended_answer])
+                        else:
+                            selection = random.choices(list(range(len(entropies))), weights=filtered_entropies, k=1)[0]
+                            self.question = question_options[selection]
+                    else:
+                        self.question = random.choice(question_options)
 
         state = deepcopy(self.extract_memory_entires(self.memory_systems))
 

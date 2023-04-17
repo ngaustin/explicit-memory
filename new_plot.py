@@ -19,7 +19,7 @@ import torch
 # from utils import read_yaml
 
 plot_dir = "./plotting_data/"
-kinds = ["1", "2", "4", "8", "16", "32", "1f", "2f", "4f", "8f", "16f", "32f"] # capacity (with f means with filter 32f)
+kinds = ["1", "2", "4", "8", "16", "1f", "2f", "4f", "8f", "16f"] # capacity (with f means with filter 32f)
 epoch = 16
 
 num = 0

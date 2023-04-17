@@ -133,6 +133,7 @@ class RLAgent:
         capacity: dict,
         pretrain_semantic: bool,
         policies: dict,
+        steps_until_use_model_answer:-1,
     ) -> None:
         """
         Args
@@ -161,6 +162,7 @@ class RLAgent:
 
         # NOTE: This toggles the difficulty of our method 
         self.pass_in_answer = False
+        self.steps_until_use_model_answer = steps_until_use_model_answer
 
         self.reset()
 
@@ -194,6 +196,7 @@ class RLAgent:
         net: nn.Module,
         epsilon: float,
         step: int,
+        use_model_action: bool
     ) -> int:
         """Using the given network, decide what action to carry out using an
         epsilon-greedy policy.
@@ -229,7 +232,9 @@ class RLAgent:
         answer = torch.argmax(answer)
 
         actions["memory_management_action"] = action 
-        actions["answer_action"] = int(answer.item()) if self.pass_in_answer else None 
+
+
+        actions["answer_action"] = int(answer.item()) if use_model_action else None 
         # print("Answer action in train.py: ", actions["answer_action"], answer.item(), self.pass_in_answer, self.state[0])
         # print("chosen action: ", actions["answer_action"])
         # print("answer_action in train.py: ", actions["answer_action"])
@@ -242,6 +247,7 @@ class RLAgent:
         net: nn.Module,
         epsilon: float = 0.0,
         step: int = None,
+        use_model_action: bool = False,
     ) -> Tuple[float, bool]:
         """Carries out a single interaction step between the agent and the environment.
         action=0 will put the oldest short memory into the episodic
@@ -256,7 +262,7 @@ class RLAgent:
         -------
         reward, done
         """
-        actions = self.get_action(net, epsilon, step)
+        actions = self.get_action(net, epsilon, step, use_model_action)
 
         action = actions["memory_management_action"]
 
@@ -387,6 +393,9 @@ class DQNLightning(LightningModule):
 
         self.replay_buffer = ReplayBuffer(self.hparams.replay_size)
         self.classification_buffer = ReplayBuffer(self.hparams.replay_size)
+        self.steps_until_use_model_answer = 1280
+        self.num_steps_so_far = 0
+        self.use_model_action = False
 
         self.agent = RLAgent(
             env=self.env,
@@ -395,6 +404,7 @@ class DQNLightning(LightningModule):
             capacity=self.hparams.capacity,
             pretrain_semantic=self.hparams.pretrain_semantic,
             policies=self.hparams.policies,
+            steps_until_use_model_answer=self.steps_until_use_model_answer
         )
 
         if self.hparams.nn_params["architecture"].lower() == "lstm":
@@ -417,9 +427,18 @@ class DQNLightning(LightningModule):
 
         self.use_filter = self.hparams["use_filter"]
         self.filter_reg = self.hparams["filter_regularization"]
+        self.training_offset = self.hparams["training_offset"]
+        self.classification_batch = self.hparams["classification_batch"]
+        self.capacity = self.hparams.capacity
 
         self.net = DQN(**self.hparams.nn_params)
         self.target_net = DQN(**self.hparams.nn_params)
+
+        self.class_optimizer = torch.optim.Adam(self.net.parameters(), lr=self.hparams.lr)
+
+        if self.hparams["accelerator"] == "gpu":
+            self.net.to("cuda")
+            self.target_net.to("cuda")
 
         self.target_net.eval()
 
@@ -429,6 +448,7 @@ class DQNLightning(LightningModule):
         self.populate(self.hparams.warm_start_size)
         self.env.reset()
         self.num_validations = 0
+        self.automatic_optimization = False
 
     def populate(self, warm_start_size: int = 1000) -> None:
         """Carry out several random steps through the environment to initially fill
@@ -472,6 +492,7 @@ class DQNLightning(LightningModule):
 
         """
         states, actions, rewards, dones, next_states, _ = batch
+        # print("td loss states ", states)
         state_action_values = (
             self.net(states[:3])[0].gather(1, actions.long().unsqueeze(-1)).squeeze(-1)
         )
@@ -506,7 +527,7 @@ class DQNLightning(LightningModule):
 
         loss = torch.nn.CrossEntropyLoss()
 
-        targets = torch.LongTensor(labels)
+        targets = torch.LongTensor(labels).to(self.device)
         # print(probs.size(), targets.size())
         answer_loss = loss(probs, targets)
 
@@ -532,7 +553,7 @@ class DQNLightning(LightningModule):
             regularization_loss = torch.mean(torch.sum(memory_filter_probs, dim=1))
 
             print("Policy loss:    ", filter_loss, "    Regularization loss: ", regularization_loss)
-            filter_loss += self.filter_reg * regularization_loss 
+            filter_loss = self.filter_reg * (filter_loss) + 10 * regularization_loss / sum(self.capacity.values())
 
             answer_loss += filter_loss
 
@@ -558,17 +579,15 @@ class DQNLightning(LightningModule):
     def training_step(self, batch: Tuple[Tensor, Tensor], nb_batch: int) -> float:
         """Carry out a single step through the environment to update the replay
         buffer. Then calculates loss based on the minibatch recieved.
-
         Args
         ----
         batch: current mini batch of replay data
         nb_batch: batch number
-
         Returns
         -------
         Training loss and log metrics
-
         """
+        # print("state input: ", batch[0])
         epsilon = self.get_epsilon(
             self.hparams.eps_start, self.hparams.eps_end, self.hparams.eps_last_step
         )
@@ -579,16 +598,39 @@ class DQNLightning(LightningModule):
             self.net,
             epsilon,
             step=self.global_step,
+            use_model_action = self.use_model_action
         )
         self.episode_reward += reward
         self.log(
             "episode_reward", torch.tensor(self.episode_reward, dtype=torch.float32)
         )
 
+        if self.steps_until_use_model_answer != -1:
+            class_loss = 0
+            dataset = RLDataset(self.replay_buffer, self.classification_batch * self.training_offset)
+            dataloader = DataLoader(dataset=dataset, batch_size=self.classification_batch)
+            counts = 0 
+            for batch_classification in dataloader:
+                self.class_optimizer.zero_grad()
+                classification_loss = self.classification_loss(batch_classification)
+                class_loss += classification_loss 
+                self.manual_backward(classification_loss)
+                self.class_optimizer.step()
+                counts += 1
+                if counts >= self.training_offset:
+                    break
+            print("\n\nMean classification loss: ", class_loss / self.training_offset)
+
+        opt = self.optimizers() 
         # calculates training loss from the given batch
+        opt.zero_grad()
         loss = self.td_loss(batch)
         self.episode_loss.append(loss)
         self.log("loss", loss)
+        print("TD Loss: ", loss, "   Steps so far: ", self.num_steps_so_far, "   Using model action? ", self.use_model_action)
+        self.manual_backward(loss)
+        opt.step()
+
 
         if done:
             self.log(
@@ -608,10 +650,10 @@ class DQNLightning(LightningModule):
         # Soft update of target network
         if self.global_step % self.hparams.sync_rate == 0:
             self.target_net.load_state_dict(self.net.state_dict())
-        
-        # New code
-        classification_loss = self.classification_loss(batch)
-        loss += classification_loss
+
+        self.num_steps_so_far += 1
+        if self.num_steps_so_far > self.steps_until_use_model_answer and self.steps_until_use_model_answer != -1:
+            self.use_model_action = True
 
         return loss
 
@@ -632,6 +674,7 @@ class DQNLightning(LightningModule):
                     self.net,
                     val_epsilon,
                     step=step,
+                    use_model_action=self.use_model_action
                 )
                 val_episode_reward_ += reward
                 if done:
@@ -675,6 +718,7 @@ class DQNLightning(LightningModule):
                     self.net,
                     test_epsilon,
                     step=step,
+                    use_model_action=self.use_model_action
                 )
                 test_episode_reward_ += reward
                 if done:
