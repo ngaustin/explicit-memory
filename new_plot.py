@@ -87,6 +87,7 @@ for kind in kinds:
 
 
 if num == len(kinds):
+    # width for with/without filter is 0.25, for without only is 0.4
     # width = 0.25
     width = 0.4
     idx = np.asanyarray([i for i in range(len(results))])
@@ -106,6 +107,7 @@ if num == len(kinds):
 
     color_order = ["orange", "dodgerblue"]
 
+    ## Code for with/without filter starts
     # for i, w, color in zip([0,1], [-0.53, 0.53], color_order):
     #     height = [results_[i][0] + 128 for _, results_ in results.items()]
     #     yerr = [results_[i][1] for _, results_ in results.items()]
@@ -118,8 +120,9 @@ if num == len(kinds):
     #         capsize=4,
     #         bottom=-128
     #     )
-
+    ## Code for with/without filter ends
     
+    # Code for without filter only starts
     height = [results_[0][0] + 128 for _, results_ in results.items()]
     yerr = [results_[0][1] for _, results_ in results.items()]
     ax.bar(
@@ -131,6 +134,8 @@ if num == len(kinds):
         capsize=4,
         bottom=-128
     )
+    # Code for without filter only ends
+
 
     ax.set_xticks(idx)
     ax.set_xticklabels(list(results.keys()))
