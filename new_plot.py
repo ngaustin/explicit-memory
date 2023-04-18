@@ -142,6 +142,7 @@ if num == len(kinds):
     plt.xticks()
     plt.yticks()
     ax.set_ylim([-128, 128])
+    ## Code for with/without filter
     # ax.legend(legend_order)
     ax.set_xlabel("Memory capacity")
     ax.set_ylabel(ylabel)
