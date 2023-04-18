@@ -1,5 +1,6 @@
 import json
 import os
+import random
 
 def read_json(fname: str) -> dict:
     """Read json.
@@ -325,7 +326,7 @@ class Answer:
                 # return question[4] == self.all_objects[obj].small_loc or question[4] == self.all_objects[obj].big_loc
                 # question object at big location exists?
                 if obj not in self.all_objects or self.all_objects[obj].small_loc == placeholder:
-                    return 2
+                    return random.choice([0, 1])
                 elif question[4] != self.all_objects[obj].small_loc:
                     return 0
                 else:
@@ -336,7 +337,7 @@ class Answer:
                 obj2 = question[3] + question[4]
                 # return self.all_objects[obj1].big_loc == self.all_objects[obj2].big_loc and self.all_objects[obj1].small_loc == self.all_objects[obj2].small_loc
                 if obj1 not in self.all_objects or obj2 not in self.all_objects or self.all_objects[obj1].small_loc == placeholder or self.all_objects[obj2].small_loc == placeholder:
-                    return 2
+                    return random.choice([0, 1])
                 elif self.all_objects[obj1].small_loc != self.all_objects[obj2].small_loc:     
                     return 0
                 else:
@@ -348,7 +349,7 @@ class Answer:
             if question[2] == "AtLocation":
                 # question small location at big location
                 if self.small_to_big[question[1]] == placeholder:
-                    return 2
+                    return random.choice([0, 1])
                 elif question[1] not in self.big_to_small[question[4]]:
                     return 0    
                 else:
@@ -356,7 +357,7 @@ class Answer:
             elif question[2] == "NextTo":
                 #question small location next to small location
                 if self.small_to_big[question[1]] == placeholder or self.small_to_big[question[4]] == placeholder:
-                    return 2
+                    return random.choice([0, 1])
                 for _, small_locs in self.big_to_small.items():
                     if question[1] in small_locs and question[4] in small_locs:
                         return 1

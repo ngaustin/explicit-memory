@@ -133,7 +133,7 @@ class RLAgent:
         capacity: dict,
         pretrain_semantic: bool,
         policies: dict,
-        steps_until_use_model_answer:-1,
+        steps_until_use_model_answer:None,
     ) -> None:
         """
         Args
@@ -161,7 +161,7 @@ class RLAgent:
         self.question = tuple([1, 2, 3, 4, 5])
 
         # NOTE: This toggles the difficulty of our method 
-        self.pass_in_answer = False
+        # self.pass_in_answer = False
         self.steps_until_use_model_answer = steps_until_use_model_answer
 
         self.reset()
@@ -393,7 +393,7 @@ class DQNLightning(LightningModule):
 
         self.replay_buffer = ReplayBuffer(self.hparams.replay_size)
         self.classification_buffer = ReplayBuffer(self.hparams.replay_size)
-        self.steps_until_use_model_answer = 1280
+        self.steps_until_use_model_answer = None # 1280
         self.num_steps_so_far = 0
         self.use_model_action = False
 
@@ -605,7 +605,7 @@ class DQNLightning(LightningModule):
             "episode_reward", torch.tensor(self.episode_reward, dtype=torch.float32)
         )
 
-        if self.steps_until_use_model_answer != -1:
+        if self.steps_until_use_model_answer != None:
             class_loss = 0
             dataset = RLDataset(self.replay_buffer, self.classification_batch * self.training_offset)
             dataloader = DataLoader(dataset=dataset, batch_size=self.classification_batch)
@@ -652,7 +652,7 @@ class DQNLightning(LightningModule):
             self.target_net.load_state_dict(self.net.state_dict())
 
         self.num_steps_so_far += 1
-        if self.num_steps_so_far > self.steps_until_use_model_answer and self.steps_until_use_model_answer != -1:
+        if self.steps_until_use_model_answer != None and self.num_steps_so_far > self.steps_until_use_model_answer:
             self.use_model_action = True
 
         return loss

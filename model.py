@@ -129,7 +129,7 @@ class LSTM(nn.Module):
         )
 
         # Final output for the question is a multicass variable that is a yes/no/idk answer
-        self.fc_final_question1 = nn.Linear(hidden_size * (len(self.memory_systems) + 1), 3)
+        self.fc_final_question1 = nn.Linear(hidden_size * (len(self.memory_systems) + 1), 2)
         
 
         # Continue original code

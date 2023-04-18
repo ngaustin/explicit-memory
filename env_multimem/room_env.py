@@ -534,7 +534,7 @@ class RoomEnv1(gym.Env):
             correct_answer = 2  # This is a dummy variable
         else:
             if isinstance(answer_action, int): # If not None, then an answer was passed into the method. Check that it is correct
-                assert answer_action == 1 or answer_action == 0 or answer_action == 2
+                assert answer_action == 1 or answer_action == 0
                 pred = answer_action
             # else:  # Otherwise use the prediction by manually using the memory
                 # if filter_action: # If there is a filter that was provided
@@ -542,12 +542,9 @@ class RoomEnv1(gym.Env):
             else:  # Then use the filter to answer the question manually
                 # assert False
                 # Populate the memory 
-                self.answer_generator.locate_objects(self.memory_systems)
-                try: 
-                    pred = self.answer_generator.get_ans(self.question) 
-                except KeyError:
-                    pred = 2
-                assert pred != None
+                self.answer_generator.locate_objects(self.memory_systems) 
+                pred = self.answer_generator.get_ans(self.question) 
+                assert pred != None and pred != 2
 
             # Initialize the memory system in the answerer
             self.answer_generator.locate_objects(self.ground_truth_memory_systems)
