@@ -11,22 +11,12 @@ import numpy as np
 import pandas as pd
 import room_env
 import torch
-# from room_env.utils import get_handcrafted
-# from sklearn.decomposition import PCA
-# from sklearn.manifold import TSNE
-
-# from train import DQNLightning, RLAgent
-# from utils import read_yaml
 
 plot_dir = "./plotting_data/"
 kinds = ["1", "2", "4", "8", "16", "1f", "2f", "4f", "8f", "16f"] # capacity (with f means with filter 32f)
 epoch = 16
 
 num = 0
-# cap_means = np.array([0] * int(len(kinds)/2))
-# cap_stds = np.array([0] * int(len(kinds)/2))
-# cap_means_f = np.array([0] * int(len(kinds)/2))
-# cap_stds_f = np.array([0] * int(len(kinds)/2))
 results = {}
 
 for kind in kinds:
@@ -100,7 +90,6 @@ if num == len(kinds):
     # width = 0.25
     width = 0.4
     idx = np.asanyarray([i for i in range(len(results))])
-    # fig, ax = plt.subplots(figsize=figsize)
     fig, ax = plt.subplots()
     title = "Avg. total rewards, varying capacities, test."
     xlabel = kinds[:int(len(kinds)/2)]
