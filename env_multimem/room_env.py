@@ -157,6 +157,9 @@ class RoomEnv1(gym.Env):
         self.init_memory_systems()
         self.answer_generator = Answer()
 
+        self.question = None 
+        self.answer = None
+
         self.correct_answer_counter = {0: 0, 1:0, 2:0}
         self.num_correct = {0: 0, 1:0, 2:0}
 
@@ -474,7 +477,7 @@ class RoomEnv1(gym.Env):
 
         state = deepcopy(self.extract_memory_entires(self.memory_systems))
 
-        print("Correct answer counter after episode: ", self.correct_answer_counter, self.num_correct)
+        # print("Correct answer counter after episode: ", self.correct_answer_counter, self.num_correct)
         
         self.correct_answer_counter = {0: 0, 1:0, 2:0}
         self.num_correct = {0: 0, 1:0, 2:0}
@@ -549,6 +552,7 @@ class RoomEnv1(gym.Env):
             # Initialize the memory system in the answerer
             self.answer_generator.locate_objects(self.ground_truth_memory_systems)
             correct_answer = self.answer_generator.get_ans(self.question)
+            print("Answer Distribution: ", self.question_to_answer[self.question])
 
             # print("Question distribution: ", self.question_to_answer.get(self.question, [0, 0, 0]))
 
@@ -599,6 +603,9 @@ class RoomEnv1(gym.Env):
                 
                 curr_count_of_answers = self.question_to_answer.get(q, [0, 0, 0])
                 curr_count_of_answers[expected_answer] += 1
+
+                # if sum(curr_count_of_answers) > 200:
+                #     curr_count_of_answers = [1 if count > 0 else 0 for count in curr_count_of_answers]
                 self.question_to_answer[q] = curr_count_of_answers
 
                 e = self.entropy(curr_count_of_answers)

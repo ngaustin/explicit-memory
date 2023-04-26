@@ -19,7 +19,7 @@ import torch
 # from utils import read_yaml
 
 plot_dir = "./plotting_data/"
-kinds = ["1", "2", "4", "8", "16", "1f", "2f", "4f", "8f", "16f"] # capacity (with f means with filter 32f)
+kinds = ["4_bidirectional", "8_bidirectional", "16_bidirectional"]# ["2_filter", "4_filter", "8_filter", "16_filter", "32_filter"]# ["vary_steps_0", "vary_steps_512", "vary_steps_1024", "vary_steps_1536"]# ["1", "2", "4", "8", "16", "32"] # capacity (with f means with filter 32f)
 epoch = 16
 
 num = 0
@@ -89,22 +89,28 @@ for kind in kinds:
 
         plt.xticks()
         plt.yticks()
-        plt.ylim((-128, 128))
+        plt.ylim((0, 128))
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.title(title)
         plt.savefig("./new_figures/" + kind + "_reward.png")
 
 
+print(num)
 if num == len(kinds):
     # width = 0.25
     width = 0.4
     idx = np.asanyarray([i for i in range(len(results))])
     # fig, ax = plt.subplots(figsize=figsize)
     fig, ax = plt.subplots()
-    title = "Avg. total rewards, varying capacities, test."
-    xlabel = kinds[:int(len(kinds)/2)]
+    
+
+    ############## EDIT HERE ##################
+    title = "Avg. total rewards, varying memory size with new model, test."
+    
+    xlabel = [4, 8, 16]# kinds[:int(len(kinds)/2)]
     ylabel = "Avg. total rewards"
+    ###########################################
 
     idx = np.asanyarray([i for i in range(len(results))])
 
@@ -144,10 +150,10 @@ if num == len(kinds):
     )
 
     ax.set_xticks(idx)
-    ax.set_xticklabels(list(results.keys()))
+    ax.set_xticklabels(xlabel)
     plt.xticks()
     plt.yticks()
-    ax.set_ylim([-128, 128])
+    ax.set_ylim([0, 128])
     # ax.legend(legend_order)
     ax.set_xlabel("Memory capacity")
     ax.set_ylabel(ylabel)

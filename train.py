@@ -393,7 +393,7 @@ class DQNLightning(LightningModule):
 
         self.replay_buffer = ReplayBuffer(self.hparams.replay_size)
         self.classification_buffer = ReplayBuffer(self.hparams.replay_size)
-        self.steps_until_use_model_answer = None # 1280
+        self.steps_until_use_model_answer = 0 # None 
         self.num_steps_so_far = 0
         self.use_model_action = False
 
@@ -434,7 +434,7 @@ class DQNLightning(LightningModule):
         self.net = DQN(**self.hparams.nn_params)
         self.target_net = DQN(**self.hparams.nn_params)
 
-        self.class_optimizer = torch.optim.Adam(self.net.parameters(), lr=self.hparams.lr)
+        self.class_optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)# self.hparams.lr)
 
         if self.hparams["accelerator"] == "gpu":
             self.net.to("cuda")
@@ -522,7 +522,6 @@ class DQNLightning(LightningModule):
         # rewards = [r for i, r in enumerate(rewards) if i in idx]
         labels = [l for i, l in enumerate(labels) if i in idx]
 
-        # TODO: Take out the filter here 
         probs, memory_filter_probs = self.net(states)
 
         loss = torch.nn.CrossEntropyLoss()
@@ -552,8 +551,8 @@ class DQNLightning(LightningModule):
 
             regularization_loss = torch.mean(torch.sum(memory_filter_probs, dim=1))
 
-            print("Policy loss:    ", filter_loss, "    Regularization loss: ", regularization_loss)
-            filter_loss = self.filter_reg * (filter_loss) + 10 * regularization_loss / sum(self.capacity.values())
+            print("Policy loss:    ", filter_loss, "    Regularization loss: ", self.filter_reg * regularization_loss / sum(self.capacity.values()), "  Avg num memories: ", regularization_loss)
+            filter_loss = (filter_loss) + self.filter_reg * regularization_loss / sum(self.capacity.values())
 
             answer_loss += filter_loss
 
@@ -605,21 +604,30 @@ class DQNLightning(LightningModule):
             "episode_reward", torch.tensor(self.episode_reward, dtype=torch.float32)
         )
 
-        if self.steps_until_use_model_answer != None:
-            class_loss = 0
-            dataset = RLDataset(self.replay_buffer, self.classification_batch * self.training_offset)
-            dataloader = DataLoader(dataset=dataset, batch_size=self.classification_batch)
-            counts = 0 
-            for batch_classification in dataloader:
-                self.class_optimizer.zero_grad()
-                classification_loss = self.classification_loss(batch_classification)
-                class_loss += classification_loss 
-                self.manual_backward(classification_loss)
-                self.class_optimizer.step()
-                counts += 1
-                if counts >= self.training_offset:
-                    break
-            print("\n\nMean classification loss: ", class_loss / self.training_offset)
+        if self.steps_until_use_model_answer != None and self.num_steps_so_far >= self.steps_until_use_model_answer:
+            if self.num_steps_so_far == self.steps_until_use_model_answer:
+                epochs = 2
+                print('\nBeginning training for {} epochs'.format(epochs), flush=True)
+                sample = len(self.replay_buffer)
+            else:
+                epochs = 1
+                sample = self.classification_batch * self.training_offset 
+            for _ in range(epochs):
+                class_loss = 0
+                dataset = RLDataset(self.replay_buffer, sample)
+                dataloader = DataLoader(dataset=dataset, batch_size=sample)
+                counts = 0 
+                for batch_classification in dataloader:
+                    self.class_optimizer.zero_grad()
+                    classification_loss = self.classification_loss(batch_classification)
+                    class_loss += classification_loss
+                    classification_loss.backward()
+                    # self.manual_backward(classification_loss)
+                    self.class_optimizer.step()
+                    counts += 1
+                    if counts >= self.training_offset:
+                        break
+                print("\n\nMean classification loss: ", class_loss / self.training_offset, flush=True)
 
         opt = self.optimizers() 
         # calculates training loss from the given batch

@@ -1,12 +1,12 @@
 use_filter: false
-filter_regularization: .5
-training_offset: 1
-classification_batch: 64
+filter_regularization: 4
+training_offset: 4
+classification_batch: 512
 allow_random_human: true
 allow_random_question: true
 pretrain_semantic: false
 varying_rewards: false
-seed: 0
+seed: 5
 num_eval_iter: 10
 max_epochs: 16
 batch_size: 1024
