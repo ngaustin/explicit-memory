@@ -11,22 +11,12 @@ import numpy as np
 import pandas as pd
 import room_env
 import torch
-# from room_env.utils import get_handcrafted
-# from sklearn.decomposition import PCA
-# from sklearn.manifold import TSNE
-
-# from train import DQNLightning, RLAgent
-# from utils import read_yaml
 
 plot_dir = "./plotting_data/"
 kinds = ["4_bidirectional", "8_bidirectional", "16_bidirectional"]# ["2_filter", "4_filter", "8_filter", "16_filter", "32_filter"]# ["vary_steps_0", "vary_steps_512", "vary_steps_1024", "vary_steps_1536"]# ["1", "2", "4", "8", "16", "32"] # capacity (with f means with filter 32f)
 epoch = 16
 
 num = 0
-# cap_means = np.array([0] * int(len(kinds)/2))
-# cap_stds = np.array([0] * int(len(kinds)/2))
-# cap_means_f = np.array([0] * int(len(kinds)/2))
-# cap_stds_f = np.array([0] * int(len(kinds)/2))
 results = {}
 
 for kind in kinds:
@@ -98,10 +88,10 @@ for kind in kinds:
 
 print(num)
 if num == len(kinds):
+    # width for with/without filter is 0.25, for without only is 0.4
     # width = 0.25
     width = 0.4
     idx = np.asanyarray([i for i in range(len(results))])
-    # fig, ax = plt.subplots(figsize=figsize)
     fig, ax = plt.subplots()
     
 
@@ -123,6 +113,7 @@ if num == len(kinds):
 
     color_order = ["orange", "dodgerblue"]
 
+    ## Code for with/without filter starts
     # for i, w, color in zip([0,1], [-0.53, 0.53], color_order):
     #     height = [results_[i][0] + 128 for _, results_ in results.items()]
     #     yerr = [results_[i][1] for _, results_ in results.items()]
@@ -135,8 +126,9 @@ if num == len(kinds):
     #         capsize=4,
     #         bottom=-128
     #     )
-
+    ## Code for with/without filter ends
     
+    # Code for without filter only starts
     height = [results_[0][0] + 128 for _, results_ in results.items()]
     yerr = [results_[0][1] for _, results_ in results.items()]
     ax.bar(
@@ -148,6 +140,8 @@ if num == len(kinds):
         capsize=4,
         bottom=-128
     )
+    # Code for without filter only ends
+
 
     ax.set_xticks(idx)
     ax.set_xticklabels(xlabel)
